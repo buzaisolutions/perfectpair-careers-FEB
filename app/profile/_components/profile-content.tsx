@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -9,7 +8,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { 
   User, 
@@ -18,8 +16,6 @@ import {
   Download, 
   Trash2, 
   Save, 
-  AlertCircle,
-  CheckCircle,
   Linkedin
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
@@ -113,7 +109,7 @@ export function ProfileContent() {
           description: 'Your information has been saved successfully.',
         })
       } else {
-        throw new Error('Error ao salvar perfil')
+        throw new Error('Error saving profile')
       }
     } catch (error) {
       console.error('Error saving profile:', error)
@@ -179,7 +175,6 @@ export function ProfileContent() {
       })
     } finally {
       setUploading(false)
-      // Reset input
       if (event.target) {
         event.target.value = ''
       }
@@ -199,7 +194,7 @@ export function ProfileContent() {
         })
         fetchDocuments()
       } else {
-        throw new Error('Error ao excluir documento')
+        throw new Error('Error deleting document')
       }
     } catch (error) {
       console.error('Delete error:', error)
@@ -245,7 +240,7 @@ export function ProfileContent() {
           transition={{ duration: 0.5 }}
         >
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Meu Profile</h1>
+            <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
             <p className="mt-2 text-lg text-gray-600">
               Manage your personal information and documents
             </p>
@@ -308,7 +303,7 @@ export function ProfileContent() {
                       <Label htmlFor="professionalTitle">Professional Title</Label>
                       <Input
                         id="professionalTitle"
-                        placeholder="ex: Desenvolvedor Frontend, Gerente de Projetos"
+                        placeholder="e.g. Frontend Developer, Project Manager"
                         value={profile?.professionalTitle || ''}
                         onChange={(e) => setProfile(prev => ({ ...prev, professionalTitle: e.target.value }))}
                       />
@@ -321,7 +316,7 @@ export function ProfileContent() {
                       </Label>
                       <Input
                         id="linkedinUrl"
-                        placeholder="https://www.linkedin.com/in/seu-perfil"
+                        placeholder="https://www.linkedin.com/in/your-profile"
                         value={profile?.linkedinUrl || ''}
                         onChange={(e) => setProfile(prev => ({ ...prev, linkedinUrl: e.target.value }))}
                       />
@@ -341,7 +336,7 @@ export function ProfileContent() {
                         <Label htmlFor="country">Country</Label>
                         <Input
                           id="country"
-                          placeholder="Holanda"
+                          placeholder="Netherlands"
                           value={profile?.country || ''}
                           onChange={(e) => setProfile(prev => ({ ...prev, country: e.target.value }))}
                         />
@@ -350,7 +345,7 @@ export function ProfileContent() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="city">Cidade</Label>
+                        <Label htmlFor="city">City</Label>
                         <Input
                           id="city"
                           placeholder="Amsterdam"
@@ -370,10 +365,10 @@ export function ProfileContent() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="summary">Summary Profissional</Label>
+                      <Label htmlFor="summary">Professional Summary</Label>
                       <Textarea
                         id="summary"
-                        placeholder="Descreva brevemente sua experiência e objetivos profissionais..."
+                        placeholder="Briefly describe your experience and professional goals..."
                         rows={4}
                         value={profile?.summary || ''}
                         onChange={(e) => setProfile(prev => ({ ...prev, summary: e.target.value }))}
@@ -422,7 +417,7 @@ export function ProfileContent() {
                 <CardHeader>
                   <CardTitle className="flex items-center">
                     <FileText className="mr-2 h-5 w-5" />
-                    Meus Documentos
+                    My Documents
                   </CardTitle>
                   <CardDescription>
                     Upload your resumes in PDF or DOCX
@@ -445,7 +440,7 @@ export function ProfileContent() {
                     >
                       <Upload className="mx-auto h-12 w-12 text-gray-400" />
                       <p className="mt-2 text-sm text-gray-600">
-                        {uploading ? 'Enviando...' : 'Clique para fazer upload ou arraste arquivos aqui'}
+                        {uploading ? 'Uploading...' : 'Click to upload or drag files here'}
                       </p>
                       <p className="text-xs text-gray-500 mt-1">
                         PDF or DOCX up to 10MB
@@ -456,7 +451,7 @@ export function ProfileContent() {
                   {/* Documents List */}
                   {documents && documents.length > 0 ? (
                     <div className="space-y-3">
-                      <h4 className="font-medium text-gray-900">Documentos enviados</h4>
+                      <h4 className="font-medium text-gray-900">Uploaded Documents</h4>
                       {documents.map((doc) => (
                         <div
                           key={doc?.id}
@@ -506,7 +501,7 @@ export function ProfileContent() {
                     <div className="text-center py-6">
                       <FileText className="mx-auto h-8 w-8 text-gray-400" />
                       <p className="mt-2 text-sm text-gray-600">
-                        None documento enviado ainda
+                        No documents uploaded yet
                       </p>
                     </div>
                   )}
