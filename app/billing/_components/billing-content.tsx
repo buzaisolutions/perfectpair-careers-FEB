@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -40,9 +39,10 @@ interface BillingDate {
   }>
 }
 
+// Configuração dos Planos
 const plans = [
   {
-    id: 'resume',
+    id: 'resume', // VAI CHAMAR O STRIPE_PRICE_BASIC
     name: 'Resume Optimization',
     price: '9.99',
     description: 'Perfect for a quick optimization',
@@ -59,7 +59,7 @@ const plans = [
     paymentType: 'ONE_TIME_RESUME'
   },
   {
-    id: 'resume_cover',
+    id: 'resume_cover', // VAI CHAMAR O STRIPE_PRICE_PRO
     name: 'Resume + Cover Letter',
     price: '14.99',
     description: 'Complete combo to stand out',
@@ -77,7 +77,7 @@ const plans = [
     popular: true
   },
   {
-    id: 'monthly',
+    id: 'monthly', // VAI CHAMAR O STRIPE_PRICE_MAX (Assinatura)
     name: 'Monthly Plan',
     price: '29.99',
     description: 'For those actively searching',
@@ -120,34 +120,29 @@ export function BillingContent() {
     }
   }
 
+  // NOVA LÓGICA DE COMPRA REAL 💸
   const handlePurchase = async (planId: string) => {
     setProcessingPayment(planId)
 
     try {
-      // For now, simulate purchase (Stripe will be implemented later)
-      toast({
-        title: 'Feature coming soon',
-        description: 'Stripe integration will be implemented soon. For now, you can test the features using test credits.',
+      // Chama nossa nova API de Checkout
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId: planId })
       })
 
-      // Simular compra para testes
-      const plan = plans.find(p => p.id === planId)
-      if (plan && !plan.recurring) {
-        // Add test credits
-        const response = await fetch('/api/billing/add-test-credits', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ credits: plan.credits })
-        })
+      const data = await response.json()
 
-        if (response.ok) {
-          toast({
-            title: 'Test credits added!',
-            description: `${plan.credits} credit(s) have been added to your account for testing.`,
-          })
-          fetchBillingDate()
-        }
+      if (!response.ok) {
+        throw new Error(data.error || 'Payment initialization failed')
       }
+
+      // Redireciona o usuário para o site do Stripe
+      if (data.url) {
+        window.location.href = data.url
+      }
+
     } catch (error) {
       console.error('Purchase error:', error)
       toast({
@@ -155,15 +150,14 @@ export function BillingContent() {
         title: 'Error',
         description: 'Could not process payment. Please try again.',
       })
-    } finally {
-      setProcessingPayment(null)
+      setProcessingPayment(null) // Só para loading se der erro, senão espera o redirect
     }
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
+    return new Date(dateString).toLocaleDateString('en-US', {
       day: '2-digit',
-      month: '2-digit',
+      month: 'long',
       year: 'numeric'
     })
   }
@@ -175,6 +169,8 @@ export function BillingContent() {
   const getPaymentStatus = (status: string) => {
     switch (status) {
       case 'COMPLETED':
+      case 'succeeded': // Stripe status
+      case 'paid':      // Stripe status
         return { label: 'Paid', color: 'bg-green-100 text-green-800', icon: Check }
       case 'PENDING':
         return { label: 'Pending', color: 'bg-yellow-100 text-yellow-800', icon: Clock }
@@ -264,22 +260,6 @@ export function BillingContent() {
               </Card>
             </motion.div>
           </div>
-
-          {/* Stripe Integration Notice */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="mb-8"
-          >
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertDescription>
-                <strong>Test Version:</strong> Stripe integration will be implemented soon. 
-                For now, you can add test credits to try all features.
-              </AlertDescription>
-            </Alert>
-          </motion.div>
 
           {/* Pricing Plans */}
           <motion.div
