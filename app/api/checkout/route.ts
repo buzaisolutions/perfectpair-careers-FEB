@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth'; // Verifique se o caminho do seu auth está aqui
+import { authOptions } from '@/lib/auth';
 import Stripe from 'stripe';
 
+// REMOVI A LINHA DE APIVERSION PARA CORRIGIR O ERRO
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16', // Usa a versão mais recente ou a que você tiver
+  typescript: true, // Opcional, ajuda no intellisense
 });
 
 export async function POST(req: Request) {
