@@ -3,44 +3,51 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import Stripe from 'stripe';
 
-// REMOVI A LINHA DE APIVERSION PARA CORRIGIR O ERRO
+// Inicializa o Stripe sem travar a versão (para evitar erro de TypeScript)
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  typescript: true, // Opcional, ajuda no intellisense
+  typescript: true,
 });
 
 export async function POST(req: Request) {
   try {
     // 1. Verifica se o usuário está logado
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // 2. Recebe qual plano o usuário clicou
-    const { planId } = await req.json();
+    const body = await req.json();
+    const { planId } = body;
 
     let priceId = '';
     let mode: 'payment' | 'subscription' = 'payment';
 
     // 3. Mapeia o ID do botão para o ID do Stripe e define o Modo
     switch (planId) {
-      case 'resume': // Plano de 9.99
+      case 'resume':
         priceId = process.env.STRIPE_PRICE_BASIC!;
-        mode = 'payment'; // Pagamento Único
+        mode = 'payment';
         break;
-      case 'resume_cover': // Plano de 14.99
+      case 'resume_cover':
         priceId = process.env.STRIPE_PRICE_PRO!;
-        mode = 'payment'; // Pagamento Único
+        mode = 'payment';
         break;
-      case 'monthly': // Assinatura de 29.99
+      case 'monthly':
         priceId = process.env.STRIPE_PRICE_MAX!;
-        mode = 'subscription'; // Assinatura Recorrente!
+        mode = 'subscription';
         break;
       default:
         return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
     }
 
-    // 4. Cria a sessão de checkout no Stripe
+    // 4. Define a URL base com segurança (Correção do erro de URL Inválida)
+    // Se a variável de ambiente falhar, usa o domínio fixo como fallback
+    const rawUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.perfectpaircareers.com';
+    // Garante que não tenha barra no final para não duplicar (ex: .com//billing)
+    const baseUrl = rawUrl.replace(/\/$/, '');
+
+    // 5. Cria a sessão de checkout no Stripe
     const stripeSession = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -49,21 +56,24 @@ export async function POST(req: Request) {
           quantity: 1,
         },
       ],
-      mode: mode, // Aqui ele troca automaticamente entre assinatura ou pagamento único
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing?success=true`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing?canceled=true`,
+      mode: mode,
+      success_url: `${baseUrl}/billing?success=true`,
+      cancel_url: `${baseUrl}/billing?canceled=true`,
       customer_email: session.user.email || undefined,
       metadata: {
-        userId: session.user.id, // Importante para sabermos quem pagou depois
+        userId: session.user.id, // Importante para o Webhook saber quem pagou
         planId: planId
       },
     });
 
-    // 5. Devolve a URL de pagamento para o Front-end
+    // 6. Devolve a URL de pagamento para o Front-end redirecionar
     return NextResponse.json({ url: stripeSession.url });
 
-  } catch (error) {
-    console.error('Stripe Error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Stripe Checkout Error:', error);
+    return NextResponse.json(
+      { error: error.message || 'Internal Server Error' }, 
+      { status: 500 }
+    );
   }
 }
