@@ -1,8 +1,7 @@
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
-  // CORREÇÃO AQUI: Caminho relativo para funcionar na Vercel e no seu PC
-  output        = "../node_modules/.prisma/client"
+  provider = "prisma-client-js"
+  // Sem binaryTargets (Vercel detecta automático)
+  // Sem output customizado
 }
 
 datasource db {
@@ -10,7 +9,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// NextAuth.js required tables
+// --- SEUS MODELS (Apenas uma vez) ---
+
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -46,7 +46,6 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// Application models
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
@@ -60,11 +59,8 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  // NextAuth.js relations
-  accounts Account[]
-  sessions Session[]
-
-  // Application relations
+  accounts      Account[]
+  sessions      Session[]
   profile       UserProfile?
   documents     Document[]
   optimizations Optimization[]
@@ -112,17 +108,17 @@ model Document {
 }
 
 model JobPosting {
-  id           String   @id @default(cuid())
+  id           String         @id @default(cuid())
   title        String
   company      String?
   location     String?
-  description  String   @db.Text
-  requirements String?  @db.Text
-  keywords     String[] @default([])
+  description  String         @db.Text
+  requirements String?        @db.Text
+  keywords     String[]       @default([])
   jobUrl       String?
-  analysisData Json? // Store AI analysis of the job posting
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  analysisData Json?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
   optimizations Optimization[]
 
@@ -139,10 +135,10 @@ model Optimization {
   originalContent        String?            @db.Text
   optimizedContent       String             @db.Text
   feedback               String?            @db.Text
-  atsScore               Int? // ATS compatibility score (0-100)
+  atsScore               Int?
   keywordMatches         String[]           @default([])
   improvementSuggestions String[]           @default([])
-  skillsToVerify         String[]           @default([]) // Skills to ask candidate about
+  skillsToVerify         String[]           @default([])
   optimizedPdfPath       String?
   creditsUsed            Int                @default(1)
   status                 OptimizationStatus @default(PENDING)
@@ -160,7 +156,7 @@ model Payment {
   id              String        @id @default(cuid())
   userId          String
   stripePaymentId String?       @unique
-  amount          Int // Amount in cents
+  amount          Int
   currency        String        @default("eur")
   paymentType     PaymentType
   creditsGranted  Int?
@@ -191,7 +187,6 @@ model Subscription {
   @@map("subscriptions")
 }
 
-// Enums
 enum UserRole {
   USER
   ADMIN
