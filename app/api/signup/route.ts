@@ -4,55 +4,60 @@ import { prisma } from '@/lib/prisma';
 
 export async function POST(req: Request) {
   try {
-    // 1. Recebe os dados do formulário
-    const body = await req.json();
-    const { email, password, firstName, lastName } = body;
+    // 1. Agora lemos FormData (para aceitar arquivos)
+    const formData = await req.formData();
+    
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    const firstName = formData.get('firstName') as string;
+    const lastName = formData.get('lastName') as string;
+    const resumeFile = formData.get('resume') as File;
 
-    // 2. Validação básica
-    if (!email || !password) {
+    // 2. Validações
+    if (!email || !password || !resumeFile) {
       return NextResponse.json(
-        { message: 'Email e senha são obrigatórios' },
+        { message: 'Missing required fields or resume file' },
         { status: 400 }
       );
     }
 
-    // 3. Verifica se já existe
+    // 3. Verifica duplicidade
     const existingUser = await prisma.user.findUnique({
       where: { email: email },
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { message: 'Este email já está cadastrado' },
+        { message: 'Email already registered' },
         { status: 409 }
       );
     }
 
-    // 4. Criptografa a senha (Segurança)
+    // 4. Cria usuário
     const hashedPassword = await hash(password, 10);
 
-    // 5. Cria o usuário no Banco
     const newUser = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         firstName: firstName || '',
         lastName: lastName || '',
+        // Futuramente, aqui salvaremos a URL do arquivo após upload para o S3
+        // documents: { create: ... } 
       },
     });
 
-    // 6. Sucesso! (Retorna sem a senha)
     const { password: _, ...userWithoutPassword } = newUser;
 
     return NextResponse.json(
-      { user: userWithoutPassword, message: 'Usuário criado com sucesso!' },
+      { user: userWithoutPassword, message: 'Account created successfully!' },
       { status: 201 }
     );
 
   } catch (error) {
-    console.error('Erro no Signup:', error);
+    console.error('Signup Error:', error);
     return NextResponse.json(
-      { message: 'Erro interno ao criar conta' },
+      { message: 'Internal server error during signup' },
       { status: 500 }
     );
   }

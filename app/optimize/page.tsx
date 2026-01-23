@@ -1,22 +1,17 @@
-// Forcando atualizacao do arquivo
 'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'           // Import necessário para o botão voltar
+import { ArrowLeft } from 'lucide-react' // Ícone da seta
 
-// CORREÇÃO: Removemos "optimizationInitialData" dos argumentos.
-// O Next.js não aceita props customizadas na página principal.
 export default function OptimizePage() {
   const router = useRouter()
   
-  // 1. Estados para controlar a interface
   const [isLoading, setIsLoading] = useState(false)
-  // Inicializamos como null ou objeto vazio para evitar erro de tipo
   const [result, setResult] = useState<any>(null)
 
   const handleOptimize = async () => {
-    // Se não tivermos dados para enviar (ex: documentId), paramos.
-    // Em um cenário real, você pegaria o ID da URL ou de um contexto.
     if (isLoading) return
     
     setIsLoading(true)
@@ -24,18 +19,14 @@ export default function OptimizePage() {
     try {
       const response = await fetch('/api/optimize', {
         method: 'POST',
-        // Atenção: Certifique-se de que result tem os dados antes de enviar
-        // Ou pegue os dados de um formulário/contexto local
         body: JSON.stringify({
           documentId: result?.documentId, 
           jobTitle: result?.jobPosting?.title,
-          // Adicione aqui outros campos se necessário
         }),
       })
 
-      if (!response.ok) throw new Error('Falha na otimização')
+      if (!response.ok) throw new Error('Optimization failed') // Traduzido
 
-      // Lógica para ler a Stream
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
       
@@ -55,14 +46,14 @@ export default function OptimizePage() {
                 router.refresh()
               }
             } catch (e) {
-              console.error("Erro ao processar JSON stream", e)
+              console.error("Error processing JSON stream", e) // Traduzido
             }
           }
         }
       }
     } catch (error) {
       console.error(error)
-      alert('Erro ao otimizar currículo.')
+      alert('Error optimizing resume.') // Traduzido
     } finally {
       setIsLoading(false)
     }
@@ -70,9 +61,19 @@ export default function OptimizePage() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Otimização de Currículo</h1>
+      {/* 1. Botão de Voltar Adicionado */}
+      <Link 
+        href="/dashboard" 
+        className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4 mr-2" />
+        Back to Dashboard
+      </Link>
 
-      {/* Exibição do Match Score */}
+      {/* Título Traduzido */}
+      <h1 className="text-2xl font-bold mb-4">Resume Optimization</h1>
+
+      {/* Match Score Traduzido */}
       <div className="bg-blue-50 p-4 rounded-lg mb-6 flex items-center justify-between">
         <div>
           <span className="text-sm text-blue-600 font-semibold uppercase">Match Score</span>
@@ -80,14 +81,14 @@ export default function OptimizePage() {
             {result?.atsScore || 0}%
           </div>
         </div>
-        <div className="text-sm text-blue-700 max-w-xs">
+        <div className="text-sm text-blue-700 max-w-xs text-right">
           {result?.status === 'COMPLETED' 
-            ? "Seu currículo foi otimizado para esta vaga!" 
-            : "Aguardando otimização..."}
+            ? "Your resume has been optimized for this job!" 
+            : "Waiting for optimization..."}
         </div>
       </div>
 
-      {/* Botão com as travas de segurança */}
+      {/* Botão Traduzido */}
       <button
         onClick={handleOptimize}
         disabled={isLoading || result?.status === 'COMPLETED'}
@@ -97,14 +98,14 @@ export default function OptimizePage() {
             : 'bg-green-600 hover:bg-green-700 text-white'
         }`}
       >
-        {isLoading ? 'Processando com IA...' : 
-         result?.status === 'COMPLETED' ? 'Currículo já Otimizado' : 'Otimizar Agora'}
+        {isLoading ? 'Processing with AI...' : 
+         result?.status === 'COMPLETED' ? 'Resume Already Optimized' : 'Optimize Now'}
       </button>
 
-      {/* Exibição do Nome do Arquivo Sugerido */}
+      {/* Sugestão de Nome Traduzido */}
       {result?.suggestedFileName && (
         <p className="mt-4 text-sm text-gray-500">
-          Sugestão de nome: <span className="font-mono">{result.suggestedFileName}</span>
+          Suggested filename: <span className="font-mono">{result.suggestedFileName}</span>
         </p>
       )}
     </div>
