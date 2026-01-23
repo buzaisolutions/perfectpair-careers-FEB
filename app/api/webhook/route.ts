@@ -3,8 +3,9 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
 
+// CONFIGURAÇÃO CORRIGIDA (Sem travar versão)
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
+  typescript: true,
 });
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
@@ -24,44 +25,37 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Webhook Error' }, { status: 400 });
     }
 
-    // 2. Processa o Evento
-    const session = event.data.object as Stripe.Checkout.Session;
-
-    // QUANDO O PAGAMENTO É APROVADO
+    // 2. Processa o Evento de Pagamento Aprovado
     if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as Stripe.Checkout.Session;
+      
+      // Pegamos os dados que enviamos no metadata lá no checkout
       const userId = session.metadata?.userId;
       const planId = session.metadata?.planId;
 
-      if (!userId) {
-        return NextResponse.json({ error: 'No user ID found in metadata' }, { status: 400 });
-      }
+      if (userId) {
+        console.log(`💰 Pagamento confirmado! User: ${userId} | Plano: ${planId}`);
 
-      console.log(`💰 Pagamento recebido do usuário: ${userId} para o plano: ${planId}`);
-
-      // Lógica de Entrega do Produto
-      if (planId === 'resume') {
-        // Adiciona 1 Crédito
-        await prisma.user.update({
-          where: { id: userId },
-          data: { credits: { increment: 1 } },
-        });
-      } else if (planId === 'resume_cover') {
-        // Adiciona 2 Créditos
-        await prisma.user.update({
-          where: { id: userId },
-          data: { credits: { increment: 2 } },
-        });
-      } else if (planId === 'monthly') {
-        // Ativa Assinatura (Exemplo simples, idealmente salvaria stripeSubscriptionId)
-        await prisma.user.update({
-          where: { id: userId },
-          data: { 
-            // Ajuste esses campos conforme seu Schema do Prisma
-            // isPremium: true, 
-            // subscriptionStatus: 'ACTIVE' 
-            credits: { increment: 100 } // Exemplo: dá créditos infinitos/altos
-          },
-        });
+        // 3. Atualiza o banco de dados com os créditos
+        if (planId === 'resume') {
+          // Plano Básico: +1 Crédito
+          await prisma.user.update({
+            where: { id: userId },
+            data: { credits: { increment: 1 } },
+          });
+        } else if (planId === 'resume_cover') {
+          // Plano Pro: +2 Créditos
+          await prisma.user.update({
+            where: { id: userId },
+            data: { credits: { increment: 2 } },
+          });
+        } else if (planId === 'monthly') {
+          // Plano Mensal: +100 Créditos (ou lógica de assinatura premium)
+          await prisma.user.update({
+            where: { id: userId },
+            data: { credits: { increment: 100 } },
+          });
+        }
       }
     }
 
