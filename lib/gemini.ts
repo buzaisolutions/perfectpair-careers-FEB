@@ -3,8 +3,10 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 // Inicializa o cliente do Google com a chave de API
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!)
 
+// CORREÇÃO AQUI: Mudamos de 'gemini-1.5-flash' para 'gemini-1.5-flash-latest'
+// Se ainda der erro, tentaremos 'gemini-pro' (versão estável antiga)
 const model = genAI.getGenerativeModel({ 
-  model: 'gemini-1.5-flash',
+  model: 'gemini-1.5-flash-latest', 
   generationConfig: {
     temperature: 0.7,
     maxOutputTokens: 8192,
@@ -33,12 +35,11 @@ export async function* generateContentStream(systemPrompt: string, userPrompt: s
 
 /**
  * Extrai texto limpo de um Buffer de PDF
- * (Versão corrigida para silenciar erros de TypeScript)
+ * (Versão com Polyfills e TypeScript Fix)
  */
 export async function extractPDFText(buffer: Buffer, filename?: string): Promise<string> {
   try {
     // 1. APLICAÇÃO DE POLYFILLS
-    // Usamos (Promise as any) para o TypeScript não reclamar que 'withResolvers' não existe
     if (typeof (Promise as any).withResolvers === 'undefined') {
       (Promise as any).withResolvers = function () {
         let resolve, reject;
@@ -50,23 +51,19 @@ export async function extractPDFText(buffer: Buffer, filename?: string): Promise
       };
     }
 
-    // Usamos 'globalAny' para definir propriedades no global sem erro de tipo
     const globalAny = global as any;
 
     if (!globalAny.DOMMatrix) {
        globalAny.DOMMatrix = class DOMMatrix {}
     }
-    
     if (!globalAny.Path2D) {
        globalAny.Path2D = class Path2D {}
     }
-
     if (!globalAny.ImageData) {
        globalAny.ImageData = class ImageData {}
     }
 
     // 2. IMPORTAÇÃO DINÂMICA SEGURA
-    // O 'as any' aqui resolve o erro vermelho "Property 'default' does not exist"
     const pdfModule = await import('pdf-parse') as any;
     const pdfParse = pdfModule.default || pdfModule;
 
