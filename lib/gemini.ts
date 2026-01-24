@@ -1,65 +1,61 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
-// Inicializa o cliente do Google com a chave de API
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!)
+// Configuração segura da API Key
+const apiKey = process.env.GOOGLE_API_KEY
+const genAI = new GoogleGenerativeAI(apiKey || '')
 
-// CORREÇÃO: Usando a versão exata e numerada para evitar erro 404
+// Usando o modelo FLASH padrão (mais rápido e estável)
 const model = genAI.getGenerativeModel({ 
-  model: 'gemini-pro', 
+  model: 'gemini-1.5-flash',
   generationConfig: {
+    responseMimeType: "application/json", // Garante JSON sempre
     temperature: 0.7,
-    maxOutputTokens: 8192,
   }
 })
 
-export async function* generateContentStream(systemPrompt: string, userPrompt: string) {
-  try {
-    const finalPrompt = `${systemPrompt}\n\n---\n\nUSER INPUT:\n${userPrompt}`
-    const result = await model.generateContentStream(finalPrompt)
+export async function generateAnalysis(systemPrompt: string, userPrompt: string) {
+  if (!apiKey) {
+    throw new Error('GOOGLE_API_KEY is missing in Vercel Settings.')
+  }
 
-    for await (const chunk of result.stream) {
-      const chunkText = chunk.text()
-      if (chunkText) {
-        yield chunkText
-      }
-    }
-  } catch (error) {
-    console.error('Gemini Stream Error:', error)
-    throw error
+  try {
+    const finalPrompt = `${systemPrompt}\n\n---\n\nANALYZE THIS:\n${userPrompt}`
+    
+    // Chamada simples (sem stream)
+    const result = await model.generateContent(finalPrompt)
+    const responseText = result.response.text()
+
+    return JSON.parse(responseText)
+  } catch (error: any) {
+    console.error('Gemini API Error:', error)
+    // Repassa o erro original para o frontend saber o que houve
+    throw new Error(error.message || 'Failed to communicate with AI')
   }
 }
 
-export async function extractPDFText(buffer: Buffer, filename?: string): Promise<string> {
+// --- MANTENDO A EXTRAÇÃO DE PDF SEGURA ---
+export async function extractPDFText(buffer: Buffer): Promise<string> {
   try {
-    // 1. APLICAÇÃO DE POLYFILLS
+    // Polyfills para evitar crash no servidor
     if (typeof (Promise as any).withResolvers === 'undefined') {
       (Promise as any).withResolvers = function () {
         let resolve, reject;
-        const promise = new Promise((res, rej) => {
-          resolve = res;
-          reject = rej;
-        });
+        const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
         return { promise, resolve, reject };
       };
     }
-
     const globalAny = global as any;
+    if (!globalAny.DOMMatrix) globalAny.DOMMatrix = class DOMMatrix {}
+    if (!globalAny.Path2D) globalAny.Path2D = class Path2D {}
+    if (!globalAny.ImageData) globalAny.ImageData = class ImageData {}
 
-    if (!globalAny.DOMMatrix) { globalAny.DOMMatrix = class DOMMatrix {} }
-    if (!globalAny.Path2D) { globalAny.Path2D = class Path2D {} }
-    if (!globalAny.ImageData) { globalAny.ImageData = class ImageData {} }
-
-    // 2. IMPORTAÇÃO DINÂMICA SEGURA
     const pdfModule = await import('pdf-parse') as any;
     const pdfParse = pdfModule.default || pdfModule;
 
     const data = await pdfParse(buffer)
-    
-    const cleanText = data.text.replace(/\n\s*\n/g, '\n').trim()
-
-    return cleanText
+    return data.text.replace(/\n\s*\n/g, '\n').trim()
   } catch (error) {
-    console.error(`Error parsing PDF (${filename}):`, error)
-    throw new Error('Failed to extract text from PDF.')
+    console.error('PDF Parse Error:', error)
+    return "" // Retorna vazio se falhar, para não travar tudo
   }
 }
