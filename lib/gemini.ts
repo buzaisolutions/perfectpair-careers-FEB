@@ -5,7 +5,7 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!)
 
 // CORREÇÃO: Usando a versão exata e numerada para evitar erro 404
 const model = genAI.getGenerativeModel({ 
-  model: 'gemini-1.5-flash-001', 
+  model: 'gemini-pro', 
   generationConfig: {
     temperature: 0.7,
     maxOutputTokens: 8192,
