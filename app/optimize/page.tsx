@@ -1,5 +1,5 @@
 import { Header } from '@/components/header'
-import OptimizeClient from './optimize-client'
+import OptimizeClient from './optimize-client.tsx'
 
 export const dynamic = 'force-dynamic' // Garante que a página sempre carregue dados frescos
 
