@@ -4,11 +4,11 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 const apiKey = process.env.GOOGLE_API_KEY
 const genAI = new GoogleGenerativeAI(apiKey || '')
 
-// Usando o modelo FLASH padrão (mais rápido e estável)
+// MUDANÇA: Usando 'gemini-pro' (Modelo Estável Universal)
+// Removemos 'responseMimeType' pois o Pro 1.0 não suporta nativamente
 const model = genAI.getGenerativeModel({ 
-  model: 'gemini-1.5-flash',
+  model: 'gemini-pro',
   generationConfig: {
-    responseMimeType: "application/json", // Garante JSON sempre
     temperature: 0.7,
   }
 })
@@ -21,14 +21,20 @@ export async function generateAnalysis(systemPrompt: string, userPrompt: string)
   try {
     const finalPrompt = `${systemPrompt}\n\n---\n\nANALYZE THIS:\n${userPrompt}`
     
-    // Chamada simples (sem stream)
+    // Chamada simples
     const result = await model.generateContent(finalPrompt)
     const responseText = result.response.text()
 
-    return JSON.parse(responseText)
+    // LIMPEZA DE SEGURANÇA: O gemini-pro gosta de enviar ```json ... ```
+    // Isso remove os marcadores para sobrar apenas o JSON puro
+    const cleanJson = responseText
+      .replace(/```json/g, '')
+      .replace(/```/g, '')
+      .trim()
+
+    return JSON.parse(cleanJson)
   } catch (error: any) {
     console.error('Gemini API Error:', error)
-    // Repassa o erro original para o frontend saber o que houve
     throw new Error(error.message || 'Failed to communicate with AI')
   }
 }
@@ -56,6 +62,6 @@ export async function extractPDFText(buffer: Buffer): Promise<string> {
     return data.text.replace(/\n\s*\n/g, '\n').trim()
   } catch (error) {
     console.error('PDF Parse Error:', error)
-    return "" // Retorna vazio se falhar, para não travar tudo
+    return "" // Retorna vazio se falhar
   }
 }

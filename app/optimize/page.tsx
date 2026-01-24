@@ -1,7 +1,7 @@
 import { Header } from '@/components/header'
-import OptimizeClient from './optimize-client.tsx'
+import OptimizeClient from './optimize-client' // Import corrigido (sem .tsx)
 
-export const dynamic = 'force-dynamic' // Garante que a página sempre carregue dados frescos
+export const dynamic = 'force-dynamic'
 
 export default function OptimizePage() {
   return (
