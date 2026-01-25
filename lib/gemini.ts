@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 // ==========================================
-// 🛡️ POLYFILLS (Necessário para o PDF)
+// 🛡️ POLYFILLS (Para PDF funcionar)
 // ==========================================
 if (typeof (Promise as any).withResolvers === 'undefined') {
   (Promise as any).withResolvers = function () {
@@ -21,50 +21,41 @@ global.DOMMatrix = global.DOMMatrix || MockDOMMatrix;
 global.HTMLCanvasElement = global.HTMLCanvasElement || class { getContext() { return null; } };
 // @ts-ignore
 global.Canvas = global.Canvas || global.HTMLCanvasElement;
-// ==========================================
 
-// Validação da Chave
+// Configuração da Chave
 const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GOOGLE_API_KEY
 if (!apiKey) throw new Error('MISSING API KEY: Configure GOOGLE_GENERATIVE_AI_API_KEY no .env')
 
 const genAI = new GoogleGenerativeAI(apiKey)
 
-/**
- * 🕵️ AUTO-DESCOBERTA AJUSTADA PARA GEMINI 2.0
- */
 async function getBestAvailableModel(): Promise<any> {
   try {
-    // 1. Obtém a lista real de modelos da sua conta
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
     
     if (!response.ok) {
        console.warn("⚠️ Falha ao listar modelos. Usando fallback seguro.");
-       return genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+       return genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     }
 
     const data = await response.json();
     const models = data.models || [];
-    
-    // Limpa os nomes (remove 'models/')
     const availableNames = models.map((m: any) => m.name.replace('models/', ''));
 
     console.log("📜 Lista de modelos detectada:", availableNames);
 
-    // 2. NOVA LISTA DE PRIORIDADE (Baseada no seu log)
-    // Damos preferência aos modelos 2.0 Flash (Rápidos e Estáveis)
+    // 🔄 MUDANÇA DE ESTRATÉGIA:
+    // Priorizamos o 'latest' (1.5 estável) pois o 2.0 tem cota zero (limit: 0) na Europa.
     const PRIORITY_ORDER = [
-      'gemini-2.0-flash',          // Seu log mostrou este!
-      'gemini-2.0-flash-exp',      // Alternativa
-      'gemini-1.5-flash',          // Fallback clássico
-      'gemini-1.5-flash-latest',
-      'gemini-flash-latest'        // Genérico
+      'gemini-flash-latest',       // 1.5 Flash Estável (Geralmente funciona com Pay-as-you-go)
+      'gemini-1.5-flash',          // Nome específico
+      'gemini-1.5-flash-002',      // Versão específica
+      'gemini-1.5-pro',            // Pro estável
+      'gemini-pro',                // Fallback legado
+      'gemini-2.0-flash'           // Último recurso (pois estava bloqueado)
     ];
 
-    // 3. Seleção Exata
     for (const target of PRIORITY_ORDER) {
-      // Verifica se o nome exato existe na lista do Google
       const exactMatch = availableNames.find((name: string) => name === target);
-      
       if (exactMatch) {
         console.log(`✅ MATCH EXATO ENCONTRADO: ${exactMatch}`);
         return genAI.getGenerativeModel({ 
@@ -74,22 +65,15 @@ async function getBestAvailableModel(): Promise<any> {
       }
     }
 
-    // 4. Se não achou exato, pega qualquer um que tenha "flash" (performance)
-    const fallbackFlash = availableNames.find((n: string) => n.includes('flash') && !n.includes('image'));
-    if (fallbackFlash) {
-       console.log(`⚠️ Usando Fallback Flash: ${fallbackFlash}`);
-       return genAI.getGenerativeModel({ model: fallbackFlash });
-    }
+    // Fallback genérico
+    const fallbackFlash = availableNames.find((n: string) => n.includes('flash') && !n.includes('2.0'));
+    if (fallbackFlash) return genAI.getGenerativeModel({ model: fallbackFlash });
 
     throw new Error('Nenhum modelo compatível encontrado.');
 
   } catch (error) {
     console.error("Erro na seleção de modelo:", error);
-    // Última tentativa cega no modelo que vimos no seu log
-    return genAI.getGenerativeModel({ 
-      model: 'gemini-2.0-flash',
-      generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
-    });
+    return genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
   }
 }
 
@@ -97,9 +81,7 @@ export async function* generateContentStream(systemPrompt: string, userPrompt: s
   const finalPrompt = `${systemPrompt}\n\n---\n\nUSER INPUT:\n${userPrompt}`
 
   try {
-    // Pega o modelo inteligentemente
     const model = await getBestAvailableModel();
-    
     const result = await model.generateContentStream(finalPrompt);
 
     for await (const chunk of result.stream) {
@@ -108,6 +90,10 @@ export async function* generateContentStream(systemPrompt: string, userPrompt: s
     }
   } catch (error: any) {
     console.error('Gemini Stream Error:', error);
+    // Se der erro de cota (429), avisa no log
+    if (error.message.includes('429') || error.message.includes('quota')) {
+       console.error("🚨 ERRO DE COTA (EUROPA): O plano gratuito tem limite 0. Verifique se o projeto está como 'Pay-as-you-go' no AI Studio.");
+    }
     throw error;
   }
 }
