@@ -33,13 +33,13 @@ export function SiteFooter() {
               </Link>
               {/* ----------------------------------------------------- */}
 
-              <Link href="/legal/disclaimer" className="text-sm text-gray-600 hover:text-primary">
+              <Link href="/policies/disclaimer" className="text-sm text-gray-600 hover:text-primary">
                 Disclaimer
               </Link>
-              <Link href="/legal/terms" className="text-sm text-gray-600 hover:text-primary">
+              <Link href="/policies/terms" className="text-sm text-gray-600 hover:text-primary">
                 Terms of Service
               </Link>
-              <Link href="/legal/privacy" className="text-sm text-gray-600 hover:text-primary">
+              <Link href="/policies/privacy" className="text-sm text-gray-600 hover:text-primary">
                 Privacy Policy
               </Link>
             </div>

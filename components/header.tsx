@@ -18,17 +18,10 @@ export function Header() {
           />
         </Link>
 
-        {/* CENTRO: MENU (Escondido em mobile) */}
-        <nav className="hidden md:flex flex-1 items-center justify-center space-x-8 text-sm font-medium">
-          <Link href="/optimize" className="transition-colors hover:text-primary text-foreground/80">
-            Optimize
-          </Link>
-          <Link href="/dashboard" className="transition-colors hover:text-primary text-foreground/80">
-            Dashboard
-          </Link>
-        </nav>
+        {/* CENTRO: VAZIO (Links removidos para limpar o visual) */}
+        <div className="flex-1" />
 
-        {/* LADO DIREITO: BOTÕES */}
+        {/* LADO DIREITO: BOTÕES DE ACESSO */}
         <div className="flex items-center space-x-4">
           <Link href="/auth/signin">
             <Button variant="ghost" size="sm">
