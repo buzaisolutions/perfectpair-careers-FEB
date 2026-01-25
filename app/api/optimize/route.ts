@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma' // Ajuste se seu prisma estiver em @/lib/db
 import { downloadFile } from '@/lib/s3'
 import mammoth from 'mammoth'
-import { generateAnalysis, extractPDFText } from '@/lib/gemini'
+import { generateContentStream, extractPDFText } from '@/lib/gemini'
 
 export const maxDuration = 60; // Tenta aumentar o tempo limite da Vercel
 export const dynamic = 'force-dynamic';
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     `
 
     // 5. Chama a IA (Modo Simples)
-    const aiResult = await generateAnalysis(systemPrompt, userPrompt)
+    const aiResult = await generateContentStream(systemPrompt, userPrompt)
 
     // 6. Salva e Responde
     return NextResponse.json({ 

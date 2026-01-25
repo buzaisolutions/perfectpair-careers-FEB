@@ -1,67 +1,60 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
+const pdf = require('pdf-parse');
 
-// Configuração segura da API Key
-const apiKey = process.env.GOOGLE_API_KEY
-const genAI = new GoogleGenerativeAI(apiKey || '')
+// CORREÇÃO: Usando o nome exato da variável do seu .env
+const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
 
-// MUDANÇA: Usando 'gemini-pro' (Modelo Estável Universal)
-// Removemos 'responseMimeType' pois o Pro 1.0 não suporta nativamente
+if (!apiKey) {
+  throw new Error('MISSING API KEY: Verifique se GOOGLE_GENERATIVE_AI_API_KEY está no arquivo .env')
+}
+
+const genAI = new GoogleGenerativeAI(apiKey)
+
+// Configuração do Modelo
+// Usamos 'gemini-1.5-flash-latest' para garantir que pegamos a versão válida mais recente
 const model = genAI.getGenerativeModel({ 
-  model: 'gemini-pro',
+  model: 'gemini-1.5-flash-latest',
   generationConfig: {
     temperature: 0.7,
+    maxOutputTokens: 8192,
   }
 })
 
-export async function generateAnalysis(systemPrompt: string, userPrompt: string) {
-  if (!apiKey) {
-    throw new Error('GOOGLE_API_KEY is missing in Vercel Settings.')
-  }
-
+/**
+ * Gera conteúdo via stream para manter a conexão ativa
+ */
+export async function* generateContentStream(systemPrompt: string, userPrompt: string) {
   try {
-    const finalPrompt = `${systemPrompt}\n\n---\n\nANALYZE THIS:\n${userPrompt}`
-    
-    // Chamada simples
-    const result = await model.generateContent(finalPrompt)
-    const responseText = result.response.text()
+    const finalPrompt = `${systemPrompt}\n\n---\n\nUSER INPUT:\n${userPrompt}`
 
-    // LIMPEZA DE SEGURANÇA: O gemini-pro gosta de enviar ```json ... ```
-    // Isso remove os marcadores para sobrar apenas o JSON puro
-    const cleanJson = responseText
-      .replace(/```json/g, '')
-      .replace(/```/g, '')
-      .trim()
+    const result = await model.generateContentStream(finalPrompt)
 
-    return JSON.parse(cleanJson)
-  } catch (error: any) {
-    console.error('Gemini API Error:', error)
-    throw new Error(error.message || 'Failed to communicate with AI')
+    for await (const chunk of result.stream) {
+      const chunkText = chunk.text()
+      if (chunkText) {
+        yield chunkText
+      }
+    }
+  } catch (error) {
+    console.error('Gemini Stream Error:', error)
+    throw error
   }
 }
 
-// --- MANTENDO A EXTRAÇÃO DE PDF SEGURA ---
-export async function extractPDFText(buffer: Buffer): Promise<string> {
+/**
+ * Extrai texto limpo de um Buffer de PDF
+ */
+export async function extractPDFText(buffer: Buffer, filename?: string): Promise<string> {
   try {
-    // Polyfills para evitar crash no servidor
-    if (typeof (Promise as any).withResolvers === 'undefined') {
-      (Promise as any).withResolvers = function () {
-        let resolve, reject;
-        const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
-        return { promise, resolve, reject };
-      };
-    }
-    const globalAny = global as any;
-    if (!globalAny.DOMMatrix) globalAny.DOMMatrix = class DOMMatrix {}
-    if (!globalAny.Path2D) globalAny.Path2D = class Path2D {}
-    if (!globalAny.ImageData) globalAny.ImageData = class ImageData {}
+    const data = await pdf(buffer)
+    
+    const cleanText = data.text
+      .replace(/\n\s*\n/g, '\n')
+      .trim()
 
-    const pdfModule = await import('pdf-parse') as any;
-    const pdfParse = pdfModule.default || pdfModule;
-
-    const data = await pdfParse(buffer)
-    return data.text.replace(/\n\s*\n/g, '\n').trim()
+    return cleanText
   } catch (error) {
-    console.error('PDF Parse Error:', error)
-    return "" // Retorna vazio se falhar
+    console.error(`Error parsing PDF (${filename}):`, error)
+    throw new Error('Failed to extract text from PDF')
   }
 }
