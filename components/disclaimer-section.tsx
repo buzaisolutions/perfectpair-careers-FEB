@@ -1,3 +1,5 @@
+// components/disclaimer-section.tsx
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertCircle, CheckCircle, XCircle, Shield } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
