@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 // ==========================================
 // 🛡️ POLYFILLS (Ambiente Falso de Navegador)
 // ==========================================
-// Necessário para evitar que o PDF.js derrube o servidor
+// Necessário para o PDF.js funcionar no servidor sem travar
 
 // 1. Fake Promise.withResolvers
 if (typeof (Promise as any).withResolvers === 'undefined') {
@@ -36,7 +36,7 @@ global.Canvas = global.Canvas || global.HTMLCanvasElement;
 
 // ==========================================
 
-// Configuração da Chave
+// Configuração da Chave da API
 const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GOOGLE_API_KEY
 if (!apiKey) {
   throw new Error('MISSING API KEY: Configure GOOGLE_GENERATIVE_AI_API_KEY no .env')
@@ -44,69 +44,60 @@ if (!apiKey) {
 
 const genAI = new GoogleGenerativeAI(apiKey)
 
-// LISTA DE MODELOS PARA TENTAR (Em ordem de preferência)
-// Se o primeiro falhar (404), ele tenta o próximo automaticamente.
-const MODEL_PRIORITY = [
-  'gemini-1.5-flash',      // 1ª Tentativa: O mais rápido e atual
-  'gemini-1.5-pro',        // 2ª Tentativa: Mais robusto
-  'gemini-pro'             // 3ª Tentativa: O clássico (quase impossível falhar)
-]
+// ⚠️ MUDANÇA CRÍTICA: Não definimos 'const model' aqui fora mais.
+// Definimos dentro da função para poder trocar se der erro.
 
 export async function* generateContentStream(systemPrompt: string, userPrompt: string) {
   const finalPrompt = `${systemPrompt}\n\n---\n\nUSER INPUT:\n${userPrompt}`
 
-  // Tenta os modelos na ordem da lista
-  for (const modelName of MODEL_PRIORITY) {
+  // TENTATIVA 1: O modelo mais rápido e atual (Nome exato, sem 'latest')
+  try {
+    console.log("🤖 Tentando conectar com: gemini-1.5-flash")
+    const model = genAI.getGenerativeModel({ 
+      model: 'gemini-1.5-flash', // NOME FIXO E OFICIAL
+      generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
+    })
+    
+    const result = await model.generateContentStream(finalPrompt)
+    for await (const chunk of result.stream) {
+      const chunkText = chunk.text()
+      if (chunkText) yield chunkText
+    }
+    return; // Sucesso! Sai da função.
+
+  } catch (error: any) {
+    console.warn("⚠️ Falha no gemini-1.5-flash. Tentando fallback para gemini-pro...", error.message)
+    
+    // TENTATIVA 2: O modelo clássico (Fallback de segurança)
     try {
-      console.log(`🤖 Tentando conectar com modelo: ${modelName}...`)
-      
-      const model = genAI.getGenerativeModel({ 
-        model: modelName,
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 8192,
-        }
+      const modelFallback = genAI.getGenerativeModel({ 
+        model: 'gemini-pro', 
+        generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
       })
-
-      const result = await model.generateContentStream(finalPrompt)
-
-      // Se chegou aqui, funcionou! Vamos transmitir os dados.
-      for await (const chunk of result.stream) {
-        const chunkText = chunk.text()
-        if (chunkText) {
-          yield chunkText
-        }
-      }
       
-      // Se terminou com sucesso, para o loop e sai da função.
-      return; 
-
-    } catch (error: any) {
-      // Se for erro de "Não Encontrado" (404), tenta o próximo modelo
-      if (error.message.includes('404') || error.message.includes('not found')) {
-        console.warn(`⚠️ Modelo ${modelName} não encontrado. Tentando próximo...`)
-        continue; // Pula para a próxima iteração do loop
+      const resultFallback = await modelFallback.generateContentStream(finalPrompt)
+      for await (const chunk of resultFallback.stream) {
+        const chunkText = chunk.text()
+        if (chunkText) yield chunkText
       }
+      return;
 
-      // Se for outro erro (ex: cota estourada, erro de rede), lança o erro real.
-      console.error('Gemini Stream Error:', error)
-      throw error
+    } catch (finalError) {
+      console.error("❌ Erro fatal: Todos os modelos falharam.", finalError)
+      throw finalError
     }
   }
-
-  // Se passou por todos os modelos e nenhum funcionou
-  throw new Error('Todos os modelos de IA falharam. Verifique sua chave de API ou região.')
 }
 
 export async function extractPDFText(buffer: Buffer, filename?: string): Promise<string> {
   try {
-    // LAZY LOAD: Carrega o PDF apenas na hora do uso para garantir que os Polyfills funcionem
+    // LAZY LOAD: Carrega o PDF apenas na hora do uso
     const pdf = require('pdf-parse');
     const data = await pdf(buffer)
     
     return data.text
       .replace(/\n\s*\n/g, '\n')
-      .replace(/[^\x20-\x7E\n]/g, '') // Remove caracteres inválidos
+      .replace(/[^\x20-\x7E\n]/g, '')
       .trim()
   } catch (error) {
     console.error(`Error parsing PDF (${filename}):`, error)
