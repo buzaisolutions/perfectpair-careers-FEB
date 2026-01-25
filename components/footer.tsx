@@ -1,40 +1,29 @@
+import Link from "next/link"
 
-import Link from 'next/link'
-import Image from 'next/image'
-
-export function Footer() {
+export function SiteFooter() {
   const currentYear = new Date().getFullYear()
-  
+
   return (
-    <footer className="border-t bg-white">
-      <div className="container mx-auto max-w-7xl px-4 py-8">
-        <div className="flex flex-col items-center justify-between space-y-4 md:flex-row md:space-y-0">
-          {/* Logo - Hidden on mobile, visible on desktop */}
-          <div className="hidden md:flex items-center space-x-2">
-            <Image 
-              src="/logo.png" 
-              alt="PerfectPair Careers" 
-              width={180} 
-              height={45}
-              className="h-[45px] w-auto"
-            />
-          </div>
-          
-          {/* Navigation Links */}
-          <div className="flex items-center space-x-6">
-            <Link href="/" className="text-sm text-gray-600 hover:text-primary">
-              Home
-            </Link>
-            <Link href="mailto:contact@perfectpair.careers" className="text-sm text-gray-600 hover:text-primary">
-              Contact
-            </Link>
-          </div>
-          
-          {/* Copyright - Visible on all devices */}
-          <p className="text-sm text-gray-600 text-center md:text-left">
-            © {currentYear} PerfectPair Careers. All rights reserved.
+    <footer className="border-t bg-background py-6 md:py-0">
+      <div className="container flex flex-col items-center justify-between gap-4 md:h-24 md:flex-row">
+        <div className="flex flex-col items-center gap-4 px-8 md:flex-row md:gap-2 md:px-0">
+          <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
+            &copy; {currentYear} <span className="font-semibold text-foreground">BuzAI Solutions</span>. All rights reserved.
           </p>
         </div>
+        
+        {/* Legal Links (EU Compliance) */}
+        <nav className="flex gap-4 sm:gap-6">
+          <Link href="/legal/terms" className="text-sm font-medium hover:underline underline-offset-4 text-muted-foreground hover:text-foreground">
+            Terms of Service
+          </Link>
+          <Link href="/legal/privacy" className="text-sm font-medium hover:underline underline-offset-4 text-muted-foreground hover:text-foreground">
+            Privacy Policy
+          </Link>
+          <Link href="/legal/cookies" className="text-sm font-medium hover:underline underline-offset-4 text-muted-foreground hover:text-foreground">
+            Cookie Policy
+          </Link>
+        </nav>
       </div>
     </footer>
   )
