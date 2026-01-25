@@ -1,97 +1,329 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma' // Ajuste se seu prisma estiver em @/lib/db
+import { prisma } from '@/lib/db'
 import { downloadFile } from '@/lib/s3'
 import mammoth from 'mammoth'
 import { generateContentStream, extractPDFText } from '@/lib/gemini'
 
-export const maxDuration = 60; // Tenta aumentar o tempo limite da Vercel
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
+
+// ============================================
+// HELPER: CALCULATE ATS SCORE
+// ============================================
+function calculateObjectiveATSScore(optimizedContent: string, keywordMatches: string[]): number {
+  let score = 0
+  const contentUpper = optimizedContent.toUpperCase()
+  
+  // 1. Headers (Estrutura)
+  const standardHeaders = ['PROFESSIONAL EXPERIENCE', 'EDUCATION', 'TECHNICAL SKILLS', 'CERTIFICATIONS', 'PROJECTS']
+  standardHeaders.forEach(header => { if (contentUpper.includes(header)) score += 5 })
+  
+  // 2. Verbos de Ação
+  const actionVerbs = ['DEVELOPED', 'IMPLEMENTED', 'MANAGED', 'LED', 'OPTIMIZED', 'DESIGNED', 'CREATED', 'BUILT', 'ARCHITECTED', 'ENGINEERED', 'SPEARHEADED']
+  let verbsFound = 0
+  actionVerbs.forEach(verb => { if (contentUpper.includes(verb) && verbsFound < 5) { score += 3; verbsFound++ } })
+  
+  // 3. Keywords (O mais importante)
+  score += Math.min(keywordMatches.length * 5, 25)
+  
+  // 4. Quantificação (Números)
+  const quantPatterns = /\d+%|\d+\s+projects?|\d+\s+users?|\d+\s+years?|\d+\s+months?|\d+\+/gi
+  const quantMatches = optimizedContent.match(quantPatterns) || []
+  score += Math.min(quantMatches.length * 3, 15)
+  
+  // 5. Formatação de Datas
+  const datePatterns = /\d{2}\/\d{4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}/gi
+  const dateMatches = optimizedContent.match(datePatterns) || []
+  if (dateMatches.length >= 2) score += 10
+  
+  // 6. Penalidade por clichês
+  const subjectiveWords = /PASSIONATE|EXCELLENT|MOTIVATED|DEDICATED|EXCITED|AMAZING|OUTSTANDING|EXCEPTIONAL/gi
+  const subjectiveMatches = optimizedContent.match(subjectiveWords) || []
+  score -= Math.min(subjectiveMatches.length * 2, 10)
+  
+  return Math.max(0, Math.min(100, score))
+}
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Verificação de Usuário
     const session = await getServerSession(authOptions)
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { documentId, jobTitle, jobDescription } = body
+    const {
+      documentId,
+      jobTitle,
+      jobCompany,
+      jobLocation,
+      jobUrl,
+      jobDescription,
+      optimizationType,
+      customCoverLetter
+    } = await request.json()
 
-    if (!documentId || !jobTitle || !jobDescription) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-    }
+    // Validações Básicas
+    if (!jobTitle || !jobDescription) return NextResponse.json({ error: 'Job title and description required' }, { status: 400 })
+    
+    const sanitizedJobTitle = jobTitle.trim()
+    const sanitizedJobDesc = jobDescription.trim().replace(/\s+/g, ' ')
+    
+    if (sanitizedJobTitle.length === 0) return NextResponse.json({ error: 'Job title empty' }, { status: 400 })
+    if (sanitizedJobDesc.length < 50) return NextResponse.json({ error: 'Job description too short' }, { status: 400 })
 
-    // 2. Busca o Arquivo
-    const document = await prisma.document.findUnique({
-      where: { id: documentId }
+    // Validação de Créditos
+    const requiredCredits = optimizationType === 'RESUME_AND_COVER_LETTER' ? 2 : 1
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      include: { subscription: true, profile: true }
     })
 
-    if (!document) {
-      return NextResponse.json({ error: 'Document not found' }, { status: 404 })
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+
+    const hasUnlimitedAccess = user.subscription?.status === 'ACTIVE'
+    if (!hasUnlimitedAccess && user.credits < requiredCredits) {
+      return NextResponse.json({ error: `Insufficient credits. Need ${requiredCredits}.` }, { status: 402 })
     }
 
-    // 3. Extrai o Texto (DOCX ou PDF)
-    let resumeText = ''
-    try {
-      const signedUrl = await downloadFile(document.cloudStoragePath)
-      const docResponse = await fetch(signedUrl)
-      const docBuffer = Buffer.from(await docResponse.arrayBuffer())
+    // Download e Leitura do Documento
+    let documentText = ''
+    if (documentId && optimizationType !== 'COVER_LETTER_ONLY') {
+      const document = await prisma.document.findFirst({ where: { id: documentId, userId: session.user.id } })
+      if (!document) return NextResponse.json({ error: 'Document not found' }, { status: 404 })
 
-      if (document.fileType === 'DOCX') {
-        const result = await mammoth.extractRawText({ buffer: docBuffer })
-        resumeText = result.value
-      } else if (document.fileType === 'PDF') {
-        resumeText = await extractPDFText(docBuffer)
-      }
-    } catch (e) {
-      console.error("File processing error:", e)
-      return NextResponse.json({ error: 'Failed to read document file' }, { status: 500 })
-    }
+      try {
+        const signedUrl = await downloadFile(document.cloudStoragePath)
+        const docResponse = await fetch(signedUrl)
+        const docBuffer = await docResponse.arrayBuffer()
 
-    if (!resumeText || resumeText.length < 50) {
-      return NextResponse.json({ error: 'Resume text is empty or unreadable' }, { status: 400 })
-    }
-
-    // 4. Prepara o Prompt
-    const systemPrompt = `
-      You are an expert ATS (Applicant Tracking System) Auditor.
-      Analyze the RESUME against the JOB DESCRIPTION.
-      
-      Return a JSON object with this exact structure:
-      {
-        "atsScore": 0,
-        "feedback": "string",
-        "keywordAnalysis": {
-          "criticalMissing": ["kw1", "kw2"],
-          "importantMatched": ["kw3", "kw4"]
+        if (document.fileType === 'DOCX') {
+          const result = await mammoth.extractRawText({ buffer: Buffer.from(docBuffer) })
+          documentText = result.value
+        } else if (document.fileType === 'PDF') {
+          documentText = await extractPDFText(Buffer.from(docBuffer), document.originalFileName)
         }
+      } catch (error) {
+        console.error('Error processing document:', error)
+        return NextResponse.json({ error: 'Error processing document file' }, { status: 500 })
       }
-    `
-    const userPrompt = `
-      JOB TITLE: ${jobTitle}
-      JOB DESCRIPTION: ${jobDescription}
-      
-      RESUME CONTENT:
-      ${resumeText.substring(0, 10000)} // Limita tamanho para evitar erro de token
-    `
+    }
 
-    // 5. Chama a IA (Modo Simples)
-    const aiResult = await generateContentStream(systemPrompt, userPrompt)
-
-    // 6. Salva e Responde
-    return NextResponse.json({ 
-      status: 'completed',
-      result: aiResult
+    // Salva no Banco de Dados
+    const jobPosting = await prisma.jobPosting.create({
+      data: {
+        title: sanitizedJobTitle,
+        company: jobCompany || '',
+        location: jobLocation || '',
+        description: sanitizedJobDesc,
+        jobUrl
+      }
     })
 
-  } catch (error: any) {
-    console.error('Server Error:', error)
-    // Devolve o erro real para o Frontend mostrar
-    return NextResponse.json({ 
-      error: error.message || 'Internal Server Error' 
-    }, { status: 500 })
+    const optimization = await prisma.optimization.create({
+      data: {
+        userId: session.user.id,
+        documentId: documentId || null,
+        jobPostingId: jobPosting.id,
+        optimizationType,
+        targetLanguage: 'ENGLISH',
+        originalContent: documentText,
+        optimizedContent: '',
+        status: 'PROCESSING'
+      }
+    })
+
+    // ==========================================
+    // 🛡️ PROMPT ENGINEERING BLINDADO (INTEGRITY PROTOCOL)
+    // ==========================================
+    const currentDate = new Date().toISOString().split('T')[0]
+    const candidateName = `${user.firstName} ${user.lastName}`.replace(/[^a-zA-Z ]/g, "").trim().replace(/\s+/g, "_")
+    const cleanJobTitle = sanitizedJobTitle.replace(/[^a-zA-Z0-9 ]/g, "").trim().replace(/\s+/g, "_").substring(0, 30)
+
+    const systemPromptCommon = `
+    You are a Forensic ATS Auditor and Career Strategist.
+    
+    *** 🛡️ INTEGRITY PROTOCOL (HIGHEST PRIORITY) ***
+    1. NO FABRICATION: You are strictly FORBIDDEN from adding skills, tools, software, or experiences that are not explicitly present in the Candidate's original resume.
+    2. EVIDENCE-BASED OPTIMIZATION ONLY: You may only rephrase *existing* content to match the Job Description keywords.
+       - Example: If Resume says "kept track of sales" and JD wants "Sales Analytics", you MAY change it IF the context supports it.
+       - Example: If JD wants "Python" and Resume has ZERO mention of coding, you must NOT add "Python".
+    3. MISSING KEYWORDS HANDLING: If a critical keyword is missing from the resume, DO NOT force it into the text. Instead, add it to the 'keywordAnalysis.criticalMissing' list in the JSON response.
+    
+    *** LANGUAGE & OUTPUT ***
+    - ALL OUTPUT MUST BE IN ENGLISH.
+    - Translate any source text to Professional English.
+
+    *** FILENAME GENERATION ***
+    - Generate a 'suggestedFileName' string: "${candidateName}_${cleanJobTitle}_${currentDate}"
+    `
+
+    let systemPrompt = ''
+    let userPrompt = ''
+
+    if (optimizationType === 'RESUME_ONLY') {
+      systemPrompt = `${systemPromptCommon}
+      TASK: Optimize Resume strictly following the Integrity Protocol.
+      
+      RESPONSE FORMAT (JSON ONLY):
+      {
+        "optimizedContent": "English resume text...",
+        "suggestedFileName": "Name_Job_Date",
+        "feedback": "Analysis...",
+        "atsScore": 0,
+        "keywordMatches": ["matched_kw1"],
+        "keywordAnalysis": { "criticalMatched": [], "criticalMissing": [], "importantMatched": [], "contextualAdded": [] },
+        "improvementSuggestions": ["suggestion1"],
+        "skillsToVerify": ["missing_skill1"]
+      }`
+      userPrompt = `JOB: ${sanitizedJobTitle}\nDESC: ${sanitizedJobDesc}\nRESUME: ${documentText}`
+
+    } else if (optimizationType === 'COVER_LETTER_ONLY') {
+       const baseInfo = customCoverLetter || user.profile?.coverLetter || ''
+       systemPrompt = `${systemPromptCommon}
+       TASK: Write Cover Letter based ONLY on real experience.
+       RESPONSE FORMAT (JSON ONLY):
+       {
+         "optimizedContent": "English cover letter...",
+         "suggestedFileName": "Name_Job_CL_Date",
+         "feedback": "Analysis...",
+         "atsScore": 0,
+         "keywordMatches": [],
+         "keywordAnalysis": {},
+         "improvementSuggestions": [],
+         "skillsToVerify": []
+       }`
+       userPrompt = `JOB: ${sanitizedJobTitle}\nDESC: ${sanitizedJobDesc}\nPROFILE: ${candidateName}\nINFO: ${baseInfo}`
+
+    } else {
+      const baseInfo = customCoverLetter || user.profile?.coverLetter || ''
+      systemPrompt = `${systemPromptCommon}
+      TASK: Resume + Cover Letter (Strict Integrity).
+      RESPONSE FORMAT (JSON ONLY):
+      {
+        "optimizedContent": "=== OPTIMIZED RESUME ===\\n...\\n=== COVER LETTER ===\\n...",
+        "suggestedFileName": "Name_Job_Full_Date",
+        "feedback": "Analysis...",
+        "atsScore": 0,
+        "keywordMatches": [],
+        "keywordAnalysis": {},
+        "improvementSuggestions": [],
+        "skillsToVerify": []
+      }`
+      userPrompt = `JOB: ${sanitizedJobTitle}\nDESC: ${sanitizedJobDesc}\nRESUME: ${documentText}\nINFO: ${baseInfo}`
+    }
+
+    // Streaming da Resposta
+    const stream = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder()
+        let buffer = ''
+
+        try {
+          for await (const chunk of generateContentStream(systemPrompt, userPrompt)) {
+            buffer += chunk
+          }
+
+          try {
+            // Limpeza do JSON
+            let cleanJson = buffer.replace(/```json/g, '').replace(/```/g, '').trim()
+            const firstBrace = cleanJson.indexOf('{')
+            const lastBrace = cleanJson.lastIndexOf('}')
+
+            if (firstBrace !== -1 && lastBrace !== -1) {
+              cleanJson = cleanJson.substring(firstBrace, lastBrace + 1)
+            } else {
+              throw new Error('No JSON found in AI response')
+            }
+
+            const finalResult = JSON.parse(cleanJson)
+            
+            if (!finalResult.optimizedContent) throw new Error('Empty optimizedContent')
+
+            const sanitizeArray = (arr: any) => Array.isArray(arr) ? arr : []
+            finalResult.keywordMatches = sanitizeArray(finalResult.keywordMatches)
+            finalResult.improvementSuggestions = sanitizeArray(finalResult.improvementSuggestions)
+            finalResult.skillsToVerify = sanitizeArray(finalResult.skillsToVerify)
+            
+            if (!finalResult.keywordAnalysis) {
+               finalResult.keywordAnalysis = { criticalMatched: [], criticalMissing: [], importantMatched: [], contextualAdded: [] }
+            }
+
+            if (!finalResult.suggestedFileName) {
+               finalResult.suggestedFileName = `${candidateName}_${cleanJobTitle}_${currentDate}`
+            }
+
+            finalResult.atsScore = calculateObjectiveATSScore(finalResult.optimizedContent, finalResult.keywordMatches)
+            
+            // CORREÇÃO AQUI: Removemos os campos extras que não existem no banco
+            const updatedOptimization = await prisma.optimization.update({
+              where: { id: optimization.id },
+              data: {
+                optimizedContent: finalResult.optimizedContent.trim(),
+                feedback: finalResult.feedback || '',
+                atsScore: finalResult.atsScore,
+                status: 'COMPLETED'
+                // Campos como keywordAnalysis foram removidos DAQUI para não dar erro,
+                // mas continuam sendo enviados para o frontend abaixo.
+              }
+            })
+
+            if (!hasUnlimitedAccess) {
+              await prisma.user.update({
+                where: { id: session.user.id },
+                data: { credits: { decrement: requiredCredits } }
+              })
+            }
+
+            // AQUI enviamos TUDO para o frontend (incluindo o que não salvamos no banco)
+            const finalData = JSON.stringify({
+              status: 'completed',
+              result: {
+                id: updatedOptimization.id,
+                status: 'COMPLETED',
+                suggestedFileName: finalResult.suggestedFileName,
+                ...finalResult // Isso garante que os Keywords apareçam na tela
+              }
+            })
+            controller.enqueue(encoder.encode(`data: ${finalData}\n\n`))
+
+          } catch (parseError: any) {
+            console.error('❌ JSON Parse Error:', parseError)
+            
+            await prisma.optimization.update({
+              where: { id: optimization.id },
+              data: { status: 'FAILED', feedback: `Error processing AI response: ${parseError.message}` }
+            })
+            
+            if (!hasUnlimitedAccess) {
+              await prisma.user.update({
+                where: { id: session.user.id },
+                data: { credits: { increment: requiredCredits } }
+              })
+            }
+            
+            const errorData = JSON.stringify({
+              status: 'error',
+              message: 'Optimization failed. Credits refunded.',
+              details: parseError.message
+            })
+            controller.enqueue(encoder.encode(`data: ${errorData}\n\n`))
+          }
+        } catch (error) {
+          console.error('Stream error:', error)
+          await prisma.optimization.update({ where: { id: optimization.id }, data: { status: 'FAILED' } })
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ status: 'error' })}\n\n`))
+        } finally {
+          controller.close()
+        }
+      },
+    })
+
+    return new Response(stream, { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-cache' } })
+
+  } catch (error) {
+    console.error('Server error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
