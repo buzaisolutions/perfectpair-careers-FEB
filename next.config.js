@@ -1,16 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configuração para PDF Parse funcionar na Vercel
-  experimental: {
-    serverComponentsExternalPackages: ['pdf-parse'],
+  // Ignora erros de TypeScript no build (Vercel)
+  typescript: {
+    ignoreBuildErrors: true,
   },
-  // Evita erros de linting na build de produção
+  // Ignora erros de ESLint no build (Vercel)
   eslint: {
     ignoreDuringBuilds: true,
   },
-  typescript: {
-    ignoreBuildErrors: true,
-  }
 };
 
 export default nextConfig;
