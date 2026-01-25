@@ -1,10 +1,8 @@
-
 import Link from 'next/link'
 import Image from 'next/image'
 
 export function SiteFooter() {
-  // Fixed year to avoid hydration errors (update annually)
-  const currentYear = 2026
+  const currentYear = 2026 // Mantive fixo como você pediu
   
   return (
     <footer className="border-t bg-white">
@@ -14,6 +12,7 @@ export function SiteFooter() {
           <div className="flex flex-col items-center justify-between space-y-4 md:flex-row md:space-y-0">
             {/* Logo - Hidden on mobile, visible on desktop */}
             <div className="hidden md:flex items-center space-x-2">
+              {/* Certifique-se que o logo.png está na pasta public */}
               <Image 
                 src="/logo.png" 
                 alt="PerfectPair Careers" 
@@ -23,21 +22,21 @@ export function SiteFooter() {
               />
             </div>
             
-            {/* Navigation Links */}
+            {/* Navigation Links - CORRIGIDOS OS CAMINHOS */}
             <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-6">
               <Link href="/" className="text-sm text-gray-600 hover:text-primary">
                 Home
               </Link>
-              <Link href="mailto:contact@perfectpaircareers.com" className="text-sm text-gray-600 hover:text-primary">
+              <Link href="/contact" className="text-sm text-gray-600 hover:text-primary">
                 Contact
               </Link>
-              <Link href="/disclaimer" className="text-sm text-gray-600 hover:text-primary">
+              <Link href="/legal/disclaimer" className="text-sm text-gray-600 hover:text-primary">
                 Disclaimer
               </Link>
-              <Link href="/terms" className="text-sm text-gray-600 hover:text-primary">
+              <Link href="/legal/terms" className="text-sm text-gray-600 hover:text-primary">
                 Terms of Service
               </Link>
-              <Link href="/privacy" className="text-sm text-gray-600 hover:text-primary">
+              <Link href="/legal/privacy" className="text-sm text-gray-600 hover:text-primary">
                 Privacy Policy
               </Link>
             </div>
