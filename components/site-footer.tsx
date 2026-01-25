@@ -2,7 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 
 export function SiteFooter() {
-  const currentYear = 2026 // Mantive fixo como você pediu
+  const currentYear = 2026
   
   return (
     <footer className="border-t bg-white">
@@ -10,9 +10,8 @@ export function SiteFooter() {
         <div className="flex flex-col space-y-6">
           {/* Main Footer Content */}
           <div className="flex flex-col items-center justify-between space-y-4 md:flex-row md:space-y-0">
-            {/* Logo - Hidden on mobile, visible on desktop */}
+            {/* Logo */}
             <div className="hidden md:flex items-center space-x-2">
-              {/* Certifique-se que o logo.png está na pasta public */}
               <Image 
                 src="/logo.png" 
                 alt="PerfectPair Careers" 
@@ -22,14 +21,18 @@ export function SiteFooter() {
               />
             </div>
             
-            {/* Navigation Links - CORRIGIDOS OS CAMINHOS */}
+            {/* Navigation Links */}
             <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-6">
               <Link href="/" className="text-sm text-gray-600 hover:text-primary">
                 Home
               </Link>
-              <Link href="/contact" className="text-sm text-gray-600 hover:text-primary">
+              
+              {/* --- MUDANÇA AQUI: mailto: para abrir o app de e-mail --- */}
+              <Link href="mailto:contact@perfectpaircareers.com" className="text-sm text-gray-600 hover:text-primary">
                 Contact
               </Link>
+              {/* ----------------------------------------------------- */}
+
               <Link href="/legal/disclaimer" className="text-sm text-gray-600 hover:text-primary">
                 Disclaimer
               </Link>
@@ -41,7 +44,7 @@ export function SiteFooter() {
               </Link>
             </div>
             
-            {/* Copyright - Visible on all devices */}
+            {/* Copyright */}
             <p className="text-sm text-gray-600 text-center md:text-left">
               © {currentYear} BuzAI Solutions. All rights reserved.
             </p>
