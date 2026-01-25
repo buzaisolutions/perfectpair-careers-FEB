@@ -1,11 +1,11 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 // ==========================================
-// 🛠️ POLYFILLS (Modo Silencioso / TypeScript Quieto)
+// 🛡️ POLYFILLS CRÍTICOS (Fake Browser Environment)
 // ==========================================
+// Isso impede o erro "DOMMatrix is not defined" e "Canvas" no servidor.
 
-// 1. Corrige Promise.withResolvers
-// O '(Promise as any)' força o TS a aceitar a função nova sem reclamar
+// 1. Fake Promise.withResolvers (para compatibilidade)
 if (typeof (Promise as any).withResolvers === 'undefined') {
   (Promise as any).withResolvers = function () {
     let resolve, reject;
@@ -17,40 +17,42 @@ if (typeof (Promise as any).withResolvers === 'undefined') {
   };
 }
 
-// 2. Corrige DOMMatrix (Usando classe Mock)
+// 2. Fake DOMMatrix (O vilão do seu log)
+// Criamos uma classe vazia apenas para o PDF.js não travar
 class MockDOMMatrix {
-  public a = 1;
-  public b = 0;
-  public c = 0;
-  public d = 1;
-  public e = 0;
-  public f = 0;
+  public a = 1; public b = 0; public c = 0; public d = 1; public e = 0; public f = 0;
   constructor() {}
   toString() { return "matrix(1, 0, 0, 1, 0, 0)"; }
 }
 // @ts-ignore
 global.DOMMatrix = global.DOMMatrix || MockDOMMatrix;
 
-// 3. Corrige Canvas
+// 3. Fake Canvas
 // @ts-ignore
 global.HTMLCanvasElement = global.HTMLCanvasElement || class {
-    getContext() { return null; }
+  getContext() { return null; }
 };
 
 // ==========================================
 
-// Importação clássica (Require) para evitar erro de tipo no pdf-parse
+// ⚠️ IMPORTANTE: O require DEVE vir DEPOIS dos polyfills acima
 const pdf = require('pdf-parse');
 
+// Validação da Chave
 const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
 if (!apiKey) {
-  throw new Error('MISSING API KEY: Verifique se GOOGLE_GENERATIVE_AI_API_KEY está no arquivo .env')
+  // Fallback para tentar ler a outra variável se a primeira falhar
+  const fallbackKey = process.env.GOOGLE_API_KEY
+  if (!fallbackKey) {
+     throw new Error('MISSING API KEY: Configure GOOGLE_GENERATIVE_AI_API_KEY no .env')
+  }
 }
 
-const genAI = new GoogleGenerativeAI(apiKey)
+// Inicialização do Gemini
+const genAI = new GoogleGenerativeAI(apiKey || process.env.GOOGLE_API_KEY!)
 
 const model = genAI.getGenerativeModel({ 
-  model: 'gemini-1.5-flash-latest',
+  model: 'gemini-1.5-flash-latest', // Versão estável
   generationConfig: {
     temperature: 0.7,
     maxOutputTokens: 8192,
@@ -76,10 +78,17 @@ export async function* generateContentStream(systemPrompt: string, userPrompt: s
 
 export async function extractPDFText(buffer: Buffer, filename?: string): Promise<string> {
   try {
+    // A mágica acontece aqui: o pdf-parse vai usar nosso MockDOMMatrix
     const data = await pdf(buffer)
-    return data.text.replace(/\n\s*\n/g, '\n').trim()
+    
+    // Limpeza de texto
+    return data.text
+      .replace(/\n\s*\n/g, '\n') // Remove linhas vazias duplas
+      .replace(/[^\x20-\x7E\n]/g, '') // Remove caracteres estranhos/invisíveis
+      .trim()
   } catch (error) {
     console.error(`Error parsing PDF (${filename}):`, error)
+    // Retorna vazio em vez de explodir o app
     return "" 
   }
 }

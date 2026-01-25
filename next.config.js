@@ -1,10 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Ignora pacotes que causam erro no servidor (PDF e Canvas)
+  // Diz ao Next.js para não tentar otimizar esses pacotes no lado do cliente
   serverExternalPackages: ['pdf-parse', 'mammoth', 'canvas'],
 
-  // Ajuste do Webpack para ignorar dependências de navegador
   webpack: (config) => {
+    // Ignora módulos de canvas nativos que não funcionam no servidor
     config.resolve.alias.canvas = false;
     config.resolve.alias.encoding = false;
     return config;
