@@ -7,7 +7,7 @@ export default function DisclaimerPage() {
     <div className="min-h-screen flex flex-col bg-white">
       <Header />
       
-      {/* Aqui a main não tem padding nem container, para deixar o componente controlar o design */}
+      {/* Aqui a main não tem padding nem container, para deixar o componente controlar o design. */}
       <main className="flex-1">
         <DisclaimerSection />
       </main>
