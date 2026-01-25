@@ -4,31 +4,28 @@ import { Button } from "@/components/ui/button"
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
-        <Link href="/" className="flex items-center space-x-3">
-          {/* ⚠️ CERTIFIQUE-SE QUE O ARQUIVO 'logo.png' ESTÁ NA PASTA 'public/' DO PROJETO.
-             Se for .svg ou outro nome, altere abaixo.
-          */}
-          <div className="relative h-8 w-8 overflow-hidden rounded-md">
-             {/* Se não tiver a logo ainda, comente a linha abaixo e use o ícone padrão */}
-             <Image src="/logo.png" alt="Perfect Pair Careers Logo" fill className="object-cover" />
+    <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-gray-100">
+      <div className="container flex h-20 items-center justify-between">
+        {/* Logo e Nome */}
+        <Link href="/" className="flex items-center gap-2">
+          {/* Garanta que o arquivo 'logo.png' ou 'logo.svg' esteja na pasta 'public' */}
+          <div className="relative h-8 w-8">
+             <Image src="/logo.png" alt="Perfect Pair Careers" width={32} height={32} className="object-contain" />
           </div>
-          <span className="font-bold text-xl hidden sm:inline-block">
-            Perfect Pair <span className="text-indigo-600">Careers</span>
-          </span>
+          <div className="flex flex-col leading-none">
+            <span className="font-bold text-xl text-slate-900 tracking-tight">PerfectPair</span>
+            <span className="text-sm font-medium text-slate-500">Careers</span>
+          </div>
         </Link>
         
-        <nav className="hidden md:flex gap-6 text-sm font-medium">
-          {/* Estes links agora vão funcionar porque adicionamos os IDs nas seções */}
-          <Link href="#features" className="hover:text-primary transition-colors">Features</Link>
-          <Link href="#pricing" className="hover:text-primary transition-colors">Pricing</Link>
-        </nav>
-
-        <div className="flex items-center gap-4">
+        {/* Botões do Lado Direito (Igual ao Original) */}
+        <div className="flex items-center gap-6">
+          <Link href="/dashboard" className="text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors">
+            Sign In
+          </Link>
           <Link href="/dashboard">
-            <Button variant="default" size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold">
-              Get Started
+            <Button className="bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-lg px-5 h-10 shadow-sm transition-all">
+              Create Account
             </Button>
           </Link>
         </div>

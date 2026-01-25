@@ -1,61 +1,73 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Sparkles } from "lucide-react"
+import { ArrowRight, FileText, Sparkles, Globe } from "lucide-react"
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden pt-16 md:pt-24 lg:pt-32 pb-12">
-      {/* Fundo colorido/gradiente */}
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-200/30 via-background to-background dark:from-indigo-900/20" />
-      
-      <div className="container flex flex-col items-center text-center gap-8">
-        <div className="inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium bg-secondary text-secondary-foreground shadow-sm">
-          <Sparkles className="mr-2 h-4 w-4 text-indigo-500" />
-          Powered by Gemini 1.5 Flash
+    <section className="relative pt-20 pb-32 bg-gradient-to-b from-purple-50/50 to-white">
+      <div className="container flex flex-col items-center text-center space-y-10">
+        
+        {/* Badge Superior */}
+        <div className="inline-flex items-center rounded-full border border-purple-100 bg-white px-4 py-1.5 text-sm font-medium text-slate-600 shadow-sm mb-4">
+          <Sparkles className="mr-2 h-4 w-4 text-purple-600" />
+          AI-powered document formatting for ATS compatibility
         </div>
         
-        {/* Título Atualizado */}
-        <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl max-w-4xl bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
-          Find Your Perfect Career Match
+        {/* Título Principal (Estilo Idêntico ao Original) */}
+        <h1 className="text-5xl font-extrabold tracking-tight sm:text-6xl md:text-7xl text-slate-900 max-w-5xl mx-auto leading-[1.1]">
+          Optimize your <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600">resume</span> <br className="hidden md:block" />
+          with AI
         </h1>
         
-        <p className="max-w-[700px] text-lg text-muted-foreground leading-relaxed">
-          Stop guessing keywords. Our AI analyzes job descriptions and tailors your resume instantly to pass ATS filters and land more interviews.
+        {/* Subtítulo */}
+        <p className="max-w-2xl mx-auto text-lg text-slate-500 md:text-xl leading-relaxed">
+          Improve your resume's technical compatibility with ATS systems using ethical AI that works with your real qualifications.
         </p>
         
-        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mt-4">
-          <Link href="/dashboard" className="w-full sm:w-auto">
-            <Button size="lg" className="w-full h-12 px-8 text-lg gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20">
-              Optimize Now <ArrowRight className="h-5 w-5" />
+        {/* Botões de Ação */}
+        <div className="flex flex-col sm:flex-row gap-4 w-full justify-center pt-4">
+          <Link href="/dashboard">
+            <Button size="lg" className="h-14 px-8 text-base bg-slate-900 hover:bg-slate-800 text-white rounded-lg gap-2 shadow-xl shadow-purple-900/5">
+              Get Started Free <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
-          <Link href="#features" className="w-full sm:w-auto">
-            <Button variant="outline" size="lg" className="w-full h-12 px-8 text-lg">
-              Features
+          <Link href="/dashboard">
+            <Button variant="outline" size="lg" className="h-14 px-8 text-base border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-lg bg-white shadow-sm">
+              I already have an account
             </Button>
           </Link>
         </div>
-        
-        {/* Mockup decorativo */}
-        <div className="mt-12 w-full max-w-5xl rounded-xl border bg-background/50 p-2 shadow-2xl backdrop-blur-sm lg:mt-20">
-           <div className="rounded-lg border bg-card p-4 md:p-8 grid md:grid-cols-2 gap-8 text-left">
-              <div className="space-y-4">
-                <div className="h-4 w-1/3 bg-muted rounded animate-pulse" />
-                <div className="h-4 w-2/3 bg-muted rounded animate-pulse" />
-                <div className="space-y-2 mt-8">
-                   <div className="h-3 w-full bg-muted/50 rounded" />
-                   <div className="h-3 w-full bg-muted/50 rounded" />
-                   <div className="h-3 w-4/5 bg-muted/50 rounded" />
+
+        {/* Três Ícones de Features (Abaixo dos botões, como no original) */}
+        <div className="grid md:grid-cols-3 gap-12 pt-20 max-w-5xl mx-auto w-full">
+            {/* Feature 1 */}
+            <div className="flex flex-col items-center space-y-3">
+                <div className="h-12 w-12 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-600">
+                    <FileText className="h-6 w-6" />
                 </div>
-              </div>
-              <div className="flex items-center justify-center border-l border-dashed pl-8">
-                 <div className="text-center space-y-2">
-                    <div className="text-4xl font-bold text-green-500">98%</div>
-                    <div className="text-sm text-muted-foreground">ATS Score</div>
-                 </div>
-              </div>
-           </div>
+                <h3 className="font-bold text-lg text-slate-900">ATS Compliant</h3>
+                <p className="text-sm text-slate-500 max-w-xs">Optimization for applicant tracking systems.</p>
+            </div>
+
+            {/* Feature 2 */}
+            <div className="flex flex-col items-center space-y-3">
+                <div className="h-12 w-12 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600">
+                    <Sparkles className="h-6 w-6" />
+                </div>
+                <h3 className="font-bold text-lg text-slate-900">Advanced AI</h3>
+                <p className="text-sm text-slate-500 max-w-xs">Intelligent job analysis and personalized optimization.</p>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="flex flex-col items-center space-y-3">
+                <div className="h-12 w-12 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600">
+                    <Globe className="h-6 w-6" />
+                </div>
+                <h3 className="font-bold text-lg text-slate-900">Ethical AI</h3>
+                <p className="text-sm text-slate-500 max-w-xs">Based on your actual qualifications and experience.</p>
+            </div>
         </div>
+
       </div>
     </section>
   )
