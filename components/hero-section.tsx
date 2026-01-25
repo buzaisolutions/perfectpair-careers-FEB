@@ -14,8 +14,9 @@ export function HeroSection() {
           Powered by Gemini 1.5 Flash
         </div>
         
+        {/* Título Atualizado */}
         <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl max-w-4xl bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
-          Craft the Perfect Resume with AI Precision
+          Find Your Perfect Career Match
         </h1>
         
         <p className="max-w-[700px] text-lg text-muted-foreground leading-relaxed">
@@ -28,14 +29,14 @@ export function HeroSection() {
               Optimize Now <ArrowRight className="h-5 w-5" />
             </Button>
           </Link>
-          <Link href="#how-it-works" className="w-full sm:w-auto">
+          <Link href="#features" className="w-full sm:w-auto">
             <Button variant="outline" size="lg" className="w-full h-12 px-8 text-lg">
-              How it works
+              Features
             </Button>
           </Link>
         </div>
         
-        {/* Imagem ou Mockup decorativo */}
+        {/* Mockup decorativo */}
         <div className="mt-12 w-full max-w-5xl rounded-xl border bg-background/50 p-2 shadow-2xl backdrop-blur-sm lg:mt-20">
            <div className="rounded-lg border bg-card p-4 md:p-8 grid md:grid-cols-2 gap-8 text-left">
               <div className="space-y-4">
