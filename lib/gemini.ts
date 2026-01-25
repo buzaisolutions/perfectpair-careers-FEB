@@ -1,11 +1,10 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 // ==========================================
-// 🛡️ POLYFILLS CRÍTICOS (Fake Browser Environment)
+// 🛡️ POLYFILLS (Fake Browser Environment)
 // ==========================================
-// Isso impede o erro "DOMMatrix is not defined" e "Canvas" no servidor.
 
-// 1. Fake Promise.withResolvers (para compatibilidade)
+// 1. Fake Promise.withResolvers
 if (typeof (Promise as any).withResolvers === 'undefined') {
   (Promise as any).withResolvers = function () {
     let resolve, reject;
@@ -17,8 +16,7 @@ if (typeof (Promise as any).withResolvers === 'undefined') {
   };
 }
 
-// 2. Fake DOMMatrix (O vilão do seu log)
-// Criamos uma classe vazia apenas para o PDF.js não travar
+// 2. Fake DOMMatrix (Evita o ReferenceError)
 class MockDOMMatrix {
   public a = 1; public b = 0; public c = 0; public d = 1; public e = 0; public f = 0;
   constructor() {}
@@ -27,32 +25,30 @@ class MockDOMMatrix {
 // @ts-ignore
 global.DOMMatrix = global.DOMMatrix || MockDOMMatrix;
 
-// 3. Fake Canvas
+// 3. Fake Canvas (Evita o Warning @napi-rs/canvas)
 // @ts-ignore
 global.HTMLCanvasElement = global.HTMLCanvasElement || class {
   getContext() { return null; }
 };
+// @ts-ignore
+global.Canvas = global.Canvas || global.HTMLCanvasElement; // Segurança extra
 
 // ==========================================
 
-// ⚠️ IMPORTANTE: O require DEVE vir DEPOIS dos polyfills acima
-const pdf = require('pdf-parse');
-
-// Validação da Chave
+// Configuração da Chave da API
 const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
 if (!apiKey) {
-  // Fallback para tentar ler a outra variável se a primeira falhar
   const fallbackKey = process.env.GOOGLE_API_KEY
   if (!fallbackKey) {
      throw new Error('MISSING API KEY: Configure GOOGLE_GENERATIVE_AI_API_KEY no .env')
   }
 }
 
-// Inicialização do Gemini
+// Inicializa o Gemini
 const genAI = new GoogleGenerativeAI(apiKey || process.env.GOOGLE_API_KEY!)
 
 const model = genAI.getGenerativeModel({ 
-  model: 'gemini-1.5-flash-latest', // Versão estável
+  model: 'gemini-1.5-flash-latest', 
   generationConfig: {
     temperature: 0.7,
     maxOutputTokens: 8192,
@@ -78,17 +74,19 @@ export async function* generateContentStream(systemPrompt: string, userPrompt: s
 
 export async function extractPDFText(buffer: Buffer, filename?: string): Promise<string> {
   try {
-    // A mágica acontece aqui: o pdf-parse vai usar nosso MockDOMMatrix
+    // ⚠️ LAZY LOAD (A MÁGICA ACONTECE AQUI)
+    // Só importamos o pdf-parse AGORA, garantindo que os Polyfills acima JÁ rodaram.
+    const pdf = require('pdf-parse');
+
     const data = await pdf(buffer)
     
     // Limpeza de texto
     return data.text
-      .replace(/\n\s*\n/g, '\n') // Remove linhas vazias duplas
-      .replace(/[^\x20-\x7E\n]/g, '') // Remove caracteres estranhos/invisíveis
+      .replace(/\n\s*\n/g, '\n')
+      .replace(/[^\x20-\x7E\n]/g, '')
       .trim()
   } catch (error) {
     console.error(`Error parsing PDF (${filename}):`, error)
-    // Retorna vazio em vez de explodir o app
     return "" 
   }
 }
