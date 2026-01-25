@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 
-export function Footer() {
+export function SiteFooter() {
   // Fixed year to avoid hydration errors (update annually)
   const currentYear = 2026
   
