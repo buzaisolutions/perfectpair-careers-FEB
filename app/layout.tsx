@@ -1,10 +1,9 @@
-
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
 import { SessionProvider } from '@/components/providers'
-import { Toaster } from '@/components/ui/toaster'
+import { Toaster } from 'sonner' // <--- CORREÇÃO: Usando sonner para combinar com o pagamento
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -42,7 +41,8 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             {children}
-            <Toaster />
+            {/* O Toaster do sonner precisa estar aqui para os avisos de pagamento aparecerem */}
+            <Toaster position="top-center" richColors />
           </ThemeProvider>
         </SessionProvider>
       </body>
