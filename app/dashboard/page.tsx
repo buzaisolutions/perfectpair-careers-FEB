@@ -1,10 +1,9 @@
 import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma' // ou '@/lib/db' verifique qual você usa
-import { DashboardContent } from './_components/dashboard-content'
+import { prisma } from '@/lib/prisma' // Se seu arquivo for lib/db, ajuste aqui
 
-export const dynamic = 'force-dynamic' // Garante que a página nunca faça cache velho
+export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
@@ -13,11 +12,24 @@ export default async function DashboardPage() {
     redirect('/auth/signin?callbackUrl=/dashboard')
   }
 
-  // A MÁGICA: Buscamos os dados frescos direto do banco
+  // CORREÇÃO: Removemos "name: true" porque não existe na tabela User.
+  // Buscamos apenas o que existe para evitar o erro de TypeScript.
   const user = await prisma.user.findUnique({
-    where: { id: session.user.id }
+    where: { id: session.user.id },
+    select: {
+      id: true,
+      email: true,
+      image: true,
+      firstName: true,
+      lastName: true,
+      credits: true, // Vital para os créditos aparecerem
+      // name: true <--- REMOVIDO POIS CAUSAVA O ERRO DE BUILD
+    }
   })
 
-  // Se o usuário não existir no banco (impossível se logado), usamos a sessão como fallback
+  // Passamos o user do banco ou o da sessão como fallback
   return <DashboardContent user={user || session.user} />
 }
+
+// Importação do componente cliente
+import { DashboardContent } from './_components/dashboard-content'
