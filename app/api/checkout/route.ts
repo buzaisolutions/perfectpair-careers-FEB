@@ -3,8 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import Stripe from "stripe"
 
-// CORREÇÃO: Removemos a data específica para evitar conflito de versões.
-// O "typescript: true" ajuda a tipagem a funcionar melhor.
+// Configuração do Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   typescript: true,
 })
@@ -30,9 +29,9 @@ export async function POST(req: Request) {
       payment_method_types: ["card"],
       line_items: [
         {
-          // Modo dinâmico: O preço vem do front-end (já com desconto do cupom)
+          // Modo dinâmico: O preço vem do front-end
           price_data: {
-            currency: "usd",
+            currency: "eur", // <--- DEFINIDO COMO EURO PARA FICAR IGUAL AO FRONTEND
             product_data: {
               name: name, // Ex: "Job Seeker Pack"
               description: `${credits} AI Optimization Credits`,
