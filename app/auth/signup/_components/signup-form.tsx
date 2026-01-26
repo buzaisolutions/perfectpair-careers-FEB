@@ -24,7 +24,7 @@ export function SignUpForm() {
     const form = event.currentTarget
     const formData = new FormData(form) // Captura campos e arquivo automaticamente
 
-    // Validação extra no Front
+    // Validação extra no Front para garantir que o arquivo existe
     const file = formData.get('resume') as File
     if (!file || file.size === 0) {
       setError("Please upload your resume to continue.")
@@ -44,7 +44,7 @@ export function SignUpForm() {
         throw new Error(data.message || 'Something went wrong')
       }
 
-      // Sucesso! Redireciona para login ou dashboard
+      // Sucesso! Redireciona para login
       router.push('/auth/signin?registered=true')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create account')
@@ -90,8 +90,8 @@ export function SignUpForm() {
         <div className="flex items-center justify-center w-full">
           <label
             htmlFor="resume"
-            className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 ${
-              fileName ? 'border-green-500 bg-green-50' : 'border-gray-300'
+            className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+              fileName ? 'border-green-500 bg-green-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
             }`}
           >
             <div className="flex flex-col items-center justify-center pt-5 pb-6">
