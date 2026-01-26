@@ -10,48 +10,48 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Check, ArrowLeft, Zap, Tag, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { toast } from "sonner" // Certifique-se de ter o sonner ou use alert()
 
-// --- CONFIGURAÇÃO DOS PLANOS ---
+// =====================================================================
+// 🟢 ÁREA DE EDIÇÃO DOS PLANOS
+// Edite aqui para ficar IGUAL à sua página inicial (Home)
+// =====================================================================
 const PLANS = [
   {
-    id: "starter",
-    name: "Starter Pack",
-    description: "Perfect for a specific application.",
-    price: 9.90,
-    credits: 5,
-    features: ["5 Credits", "PDF Export included", "Basic ATS Analysis"],
+    id: "resume", // ID interno
+    name: "Resume Optimization", // NOME QUE APARECE NA TELA
+    description: "Optimize a single resume for a specific job.",
+    price: 9.99, // PREÇO
+    credits: 1, // Quantos créditos o usuário ganha
+    features: ["1 Credit", "PDF Export included", "Basic ATS Analysis"],
     highlight: false,
   },
   {
-    id: "seeker",
-    name: "Job Seeker",
-    description: "Best for active job hunting.",
-    price: 29.90,
-    credits: 20,
-    features: ["20 Credits", "Priority AI Processing", "Advanced ATS Scoring", "Editable DOCX Export"],
-    highlight: true,
+    id: "resume_cover",
+    name: "Resume + Cover Letter",
+    description: "Full application package optimization.",
+    price: 19.99,
+    credits: 2,
+    features: ["2 Credits", "Cover Letter Generation", "Priority Processing", "Editable DOCX Export"],
+    highlight: true, // Este é o card destacado
   },
   {
-    id: "pro",
-    name: "Career Pro",
-    description: "For long-term career management.",
-    price: 49.90,
+    id: "monthly",
+    name: "Career Growth",
+    description: "Best for active job seekers applying often.",
+    price: 29.99,
     credits: 50,
-    features: ["50 Credits", "All Job Seeker features", "LinkedIn Optimization Tips", "Cover Letter Generation"],
+    features: ["50 Credits", "LinkedIn Optimization", "All Premium Features", "24/7 Support"],
     highlight: false,
   },
 ]
-// -----------------------------------------------------------
+// =====================================================================
 
 export default function PricingPage() {
   const router = useRouter()
   const [couponCode, setCouponCode] = useState("")
   const [discount, setDiscount] = useState(0)
-  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
-  
-  // Estado para controlar qual botão está carregando
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null)
+  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
 
   const applyCoupon = () => {
     if (couponCode.toUpperCase() === "PROMO20") {
@@ -63,7 +63,6 @@ export default function PricingPage() {
     }
   }
 
-  // FUNÇÃO QUE CHAMA O STRIPE
   const handleCheckout = async (plan: typeof PLANS[0]) => {
     try {
       setLoadingPlan(plan.id)
@@ -82,7 +81,6 @@ export default function PricingPage() {
       })
 
       if (response.status === 401) {
-        // Se não estiver logado, manda pro login
         router.push(`/auth/signin?callbackUrl=/pricing`)
         return
       }
@@ -90,7 +88,6 @@ export default function PricingPage() {
       const data = await response.json()
 
       if (data.url) {
-        // Redireciona para o Stripe
         window.location.href = data.url
       } else {
         throw new Error("Failed to create checkout session")
@@ -122,8 +119,7 @@ export default function PricingPage() {
             Simple, Transparent Pricing
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Choose the credit pack that fits your needs. 
-            Credits never expire.
+            Get the credits you need to land your dream job.
           </p>
         </div>
 
@@ -212,7 +208,7 @@ export default function PricingPage() {
                     className="w-full" 
                     variant={plan.highlight ? "default" : "outline"}
                     onClick={() => handleCheckout(plan)}
-                    disabled={!!loadingPlan} // Desabilita se qualquer um estiver carregando
+                    disabled={!!loadingPlan} 
                   >
                     {isLoading ? (
                       <>
