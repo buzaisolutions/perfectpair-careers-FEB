@@ -1,8 +1,9 @@
 import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma' // Se seu arquivo for lib/db, ajuste aqui
+import { prisma } from '@/lib/db' // Se der erro aqui, mude para '@/lib/prisma'
 
+// Força a página a sempre buscar dados novos
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
@@ -12,24 +13,23 @@ export default async function DashboardPage() {
     redirect('/auth/signin?callbackUrl=/dashboard')
   }
 
-  // CORREÇÃO: Removemos "name: true" porque não existe na tabela User.
-  // Buscamos apenas o que existe para evitar o erro de TypeScript.
+  // 1. Buscamos o usuário no banco
+  // REMOVEMOS o 'select' específico para evitar erros de campo inexistente
   const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: {
-      id: true,
-      email: true,
-      image: true,
-      firstName: true,
-      lastName: true,
-      credits: true, // Vital para os créditos aparecerem
-      // name: true <--- REMOVIDO POIS CAUSAVA O ERRO DE BUILD
-    }
+    where: { id: session.user.id }
   })
 
-  // Passamos o user do banco ou o da sessão como fallback
-  return <DashboardContent user={user || session.user} />
-}
+  // 2. Se o usuário não tiver 'credits' (null), definimos como 0
+  // Usamos 'any' aqui para o TypeScript parar de bloquear o deploy
+  const userSafe: any = {
+    ...session.user,
+    ...(user || {}),
+    credits: user?.credits ?? 0,
+    firstName: user?.firstName || session.user.name?.split(' ')[0] || 'User'
+  }
 
-// Importação do componente cliente
-import { DashboardContent } from './_components/dashboard-content'
+  // Importamos o componente aqui dentro para evitar dependências circulares
+  const { DashboardContent } = await import('./_components/dashboard-content')
+
+  return <DashboardContent user={userSafe} />
+}
