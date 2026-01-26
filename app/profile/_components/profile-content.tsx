@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { Header } from '@/components/header'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -18,10 +19,13 @@ import {
   Save, 
   Linkedin
 } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { useToast } from '@/hooks/use-toast' 
 import { motion } from 'framer-motion'
 
-interface UserProfile {
+interface ProfileFormData {
+  firstName: string
+  lastName: string
+  email: string
   linkedinUrl: string
   coverLetter: string
   phoneNumber: string
@@ -42,9 +46,14 @@ interface Document {
 }
 
 export function ProfileContent() {
-  const { data: session } = useSession()
+  const { data: session, update } = useSession()
   const { toast } = useToast()
-  const [profile, setProfile] = useState<UserProfile>({
+  const router = useRouter()
+  
+  const [formData, setFormData] = useState<ProfileFormData>({
+    firstName: '',
+    lastName: '',
+    email: '',
     linkedinUrl: '',
     coverLetter: '',
     phoneNumber: '',
@@ -54,6 +63,7 @@ export function ProfileContent() {
     professionalTitle: '',
     summary: ''
   })
+
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -64,12 +74,35 @@ export function ProfileContent() {
     fetchDocuments()
   }, [])
 
+  useEffect(() => {
+    if (session?.user && !formData.email) {
+      setFormData(prev => ({
+        ...prev,
+        email: session.user.email || '',
+        firstName: prev.firstName || session.user.firstName || session.user.name?.split(' ')[0] || '',
+        lastName: prev.lastName || session.user.lastName || session.user.name?.split(' ').slice(1).join(' ') || '',
+      }))
+    }
+  }, [session])
+
   const fetchProfile = async () => {
     try {
       const response = await fetch('/api/profile')
       if (response.ok) {
         const data = await response.json()
-        setProfile(data?.profile || profile)
+        setFormData({
+            firstName: data.firstName || '',
+            lastName: data.lastName || '',
+            email: data.email || '',
+            linkedinUrl: data.linkedinUrl || '',
+            coverLetter: data.coverLetter || '',
+            phoneNumber: data.phoneNumber || '',
+            address: data.address || '',
+            city: data.city || '',
+            country: data.country || '',
+            professionalTitle: data.professionalTitle || '',
+            summary: data.summary || ''
+        })
       }
     } catch (error) {
       console.error('Error fetching profile:', error)
@@ -90,6 +123,11 @@ export function ProfileContent() {
     }
   }
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value } = e.target
+    setFormData(prev => ({ ...prev, [id]: value }))
+  }
+
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
@@ -100,14 +138,26 @@ export function ProfileContent() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(profile),
+        body: JSON.stringify(formData),
       })
 
       if (response.ok) {
+        await update({
+            ...session,
+            user: {
+                ...session?.user,
+                name: `${formData.firstName} ${formData.lastName}`.trim(),
+                firstName: formData.firstName,
+                lastName: formData.lastName
+            }
+        })
+
         toast({
           title: 'Profile updated!',
           description: 'Your information has been saved successfully.',
         })
+        
+        router.refresh()
       } else {
         throw new Error('Error saving profile')
       }
@@ -136,7 +186,7 @@ export function ProfileContent() {
       return
     }
 
-    if (file.size > 10 * 1024 * 1024) { // 10MB
+    if (file.size > 10 * 1024 * 1024) { 
       toast({
         variant: 'destructive',
         title: 'File too large',
@@ -247,7 +297,6 @@ export function ProfileContent() {
           </div>
 
           <div className="grid gap-8 md:grid-cols-1 lg:grid-cols-1">
-            {/* Profile Form */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -270,21 +319,21 @@ export function ProfileContent() {
                         <Label htmlFor="firstName">First Name</Label>
                         <Input
                           id="firstName"
-                          value={session?.user?.firstName || ''}
-                          disabled
-                          className="bg-gray-50"
+                          value={formData.firstName}
+                          onChange={handleChange}
+                          className="bg-white"
+                          placeholder="John"
                         />
-                        <p className="text-xs text-gray-500">First Name cannot be changed</p>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="lastName">Last Name</Label>
                         <Input
                           id="lastName"
-                          value={session?.user?.lastName || ''}
-                          disabled
-                          className="bg-gray-50"
+                          value={formData.lastName}
+                          onChange={handleChange}
+                          className="bg-white"
+                          placeholder="Doe"
                         />
-                        <p className="text-xs text-gray-500">Last Name cannot be changed</p>
                       </div>
                     </div>
 
@@ -292,9 +341,9 @@ export function ProfileContent() {
                       <Label htmlFor="email">Email</Label>
                       <Input
                         id="email"
-                        value={session?.user?.email || ''}
+                        value={formData.email}
                         disabled
-                        className="bg-gray-50"
+                        className="bg-gray-100 cursor-not-allowed"
                       />
                       <p className="text-xs text-gray-500">Email cannot be changed</p>
                     </div>
@@ -304,8 +353,8 @@ export function ProfileContent() {
                       <Input
                         id="professionalTitle"
                         placeholder="e.g. Frontend Developer, Project Manager"
-                        value={profile?.professionalTitle || ''}
-                        onChange={(e) => setProfile(prev => ({ ...prev, professionalTitle: e.target.value }))}
+                        value={formData.professionalTitle}
+                        onChange={handleChange}
                       />
                     </div>
 
@@ -317,8 +366,8 @@ export function ProfileContent() {
                       <Input
                         id="linkedinUrl"
                         placeholder="https://www.linkedin.com/in/your-profile"
-                        value={profile?.linkedinUrl || ''}
-                        onChange={(e) => setProfile(prev => ({ ...prev, linkedinUrl: e.target.value }))}
+                        value={formData.linkedinUrl}
+                        onChange={handleChange}
                       />
                     </div>
 
@@ -328,8 +377,8 @@ export function ProfileContent() {
                         <Input
                           id="phoneNumber"
                           placeholder="+31 6 12345678"
-                          value={profile?.phoneNumber || ''}
-                          onChange={(e) => setProfile(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                          value={formData.phoneNumber}
+                          onChange={handleChange}
                         />
                       </div>
                       <div className="space-y-2">
@@ -337,8 +386,8 @@ export function ProfileContent() {
                         <Input
                           id="country"
                           placeholder="Netherlands"
-                          value={profile?.country || ''}
-                          onChange={(e) => setProfile(prev => ({ ...prev, country: e.target.value }))}
+                          value={formData.country}
+                          onChange={handleChange}
                         />
                       </div>
                     </div>
@@ -349,8 +398,8 @@ export function ProfileContent() {
                         <Input
                           id="city"
                           placeholder="Amsterdam"
-                          value={profile?.city || ''}
-                          onChange={(e) => setProfile(prev => ({ ...prev, city: e.target.value }))}
+                          value={formData.city}
+                          onChange={handleChange}
                         />
                       </div>
                       <div className="space-y-2">
@@ -358,8 +407,8 @@ export function ProfileContent() {
                         <Input
                           id="address"
                           placeholder="Street, number"
-                          value={profile?.address || ''}
-                          onChange={(e) => setProfile(prev => ({ ...prev, address: e.target.value }))}
+                          value={formData.address}
+                          onChange={handleChange}
                         />
                       </div>
                     </div>
@@ -370,8 +419,8 @@ export function ProfileContent() {
                         id="summary"
                         placeholder="Briefly describe your experience and professional goals..."
                         rows={4}
-                        value={profile?.summary || ''}
-                        onChange={(e) => setProfile(prev => ({ ...prev, summary: e.target.value }))}
+                        value={formData.summary}
+                        onChange={handleChange}
                       />
                     </div>
 
@@ -381,8 +430,8 @@ export function ProfileContent() {
                         id="coverLetter"
                         placeholder="Write a cover letter that will be used as a base for optimizations..."
                         rows={6}
-                        value={profile?.coverLetter || ''}
-                        onChange={(e) => setProfile(prev => ({ ...prev, coverLetter: e.target.value }))}
+                        value={formData.coverLetter}
+                        onChange={handleChange}
                       />
                       <p className="text-xs text-gray-500">
                         This letter will be automatically personalized for each job
@@ -407,7 +456,6 @@ export function ProfileContent() {
               </Card>
             </motion.div>
 
-            {/* Documents */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -424,7 +472,6 @@ export function ProfileContent() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Upload Section */}
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
                     <input
                       type="file"
@@ -448,7 +495,6 @@ export function ProfileContent() {
                     </label>
                   </div>
 
-                  {/* Documents List */}
                   {documents && documents.length > 0 ? (
                     <div className="space-y-3">
                       <h4 className="font-medium text-gray-900">Uploaded Documents</h4>
