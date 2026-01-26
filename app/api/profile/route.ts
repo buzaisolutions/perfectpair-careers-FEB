@@ -58,7 +58,7 @@ export async function PUT(request: NextRequest) {
       summary
     } = data
 
-    // CORREÇÃO: Removemos a linha "name: ..." pois esse campo não existe no seu Schema Prisma.
+    // CORREÇÃO: Removemos  linha "name: ..." pois esse campo não existe no seu Schema Prisma.
     // Atualizamos apenas firstName e lastName.
     await prisma.user.update({
       where: { id: session.user.id },
