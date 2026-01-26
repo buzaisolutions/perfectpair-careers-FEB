@@ -1,6 +1,7 @@
 'use client'
 
 import Link from "next/link"
+import Image from "next/image" // Importamos o Image
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Sparkles, FileText, Clock, TrendingUp, Plus, CreditCard } from "lucide-react"
@@ -14,19 +15,39 @@ interface DashboardContentProps {
 }
 
 export function DashboardContent({ user }: DashboardContentProps) {
+  // Lógica para pegar apenas o primeiro nome
+  // Se o nome for "Roberto Carlos", ele pega "Roberto". Se não tiver nome, usa "User".
+  const firstName = user?.name ? user.name.split(' ')[0] : 'User'
+
   return (
     <div className="container py-8 max-w-7xl space-y-8">
       
-      {/* 1. Cabeçalho com Boas-vindas e Botão de Ação */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Welcome back, {user?.name || 'User'}! Here's an overview of your career tools.
-          </p>
+      {/* 1. LOGO E CABEÇALHO */}
+      <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-4">
+        <div className="space-y-4">
+          {/* Logo Adicionada Aqui */}
+          <div className="block">
+            <Image 
+              src="/logo.png" 
+              alt="PerfectPair Careers" 
+              width={200} 
+              height={60}
+              className="h-12 w-auto object-contain"
+              priority
+            />
+          </div>
+          
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+            {/* Saudação Personalizada com Primeiro Nome */}
+            <p className="text-muted-foreground mt-1">
+              Welcome back, <span className="font-semibold text-foreground">{firstName}</span>! Here's an overview of your career tools.
+            </p>
+          </div>
         </div>
+
+        {/* Botões de Ação */}
         <div className="flex space-x-2">
-           {/* Botão para comprar créditos (Exemplo) */}
            <Link href="/pricing">
             <Button variant="outline">
               <CreditCard className="mr-2 h-4 w-4" />
@@ -50,8 +71,8 @@ export function DashboardContent({ user }: DashboardContentProps) {
             <Sparkles className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
-            <p className="text-xs text-muted-foreground">+2 from last month</p>
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-xs text-muted-foreground">Start your first optimization</p>
           </CardContent>
         </Card>
         
@@ -61,8 +82,8 @@ export function DashboardContent({ user }: DashboardContentProps) {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">4</div>
-            <p className="text-xs text-muted-foreground">Across 3 different industries</p>
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-xs text-muted-foreground">Ready to export</p>
           </CardContent>
         </Card>
 
@@ -72,8 +93,8 @@ export function DashboardContent({ user }: DashboardContentProps) {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">85%</div>
-            <p className="text-xs text-muted-foreground">+12% improvement</p>
+            <div className="text-2xl font-bold">--%</div>
+            <p className="text-xs text-muted-foreground">Unlock scores with credits</p>
           </CardContent>
         </Card>
         
@@ -83,8 +104,10 @@ export function DashboardContent({ user }: DashboardContentProps) {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">5</div>
-            <p className="text-xs text-muted-foreground">Expires in 30 days</p>
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-xs text-muted-foreground">
+              <Link href="/pricing" className="text-primary hover:underline">Buy more credits</Link>
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -92,7 +115,7 @@ export function DashboardContent({ user }: DashboardContentProps) {
       {/* 3. Área Principal: Histórico Recente e Dicas */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         
-        {/* Tabela de Histórico (Ocupa 4 colunas) */}
+        {/* Tabela de Histórico */}
         <Card className="col-span-4">
           <CardHeader>
             <CardTitle>Recent Optimizations</CardTitle>
@@ -101,40 +124,22 @@ export function DashboardContent({ user }: DashboardContentProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Exemplo de Lista Vazia ou Preenchida */}
-            <div className="space-y-4">
-               {/* Item 1 */}
-               <div className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
-                  <div className="flex items-center space-x-4">
-                    <div className="bg-purple-100 p-2 rounded-full">
-                        <FileText className="h-4 w-4 text-purple-600" />
-                    </div>
-                    <div>
-                        <p className="text-sm font-medium leading-none">Software Engineer - Google</p>
-                        <p className="text-xs text-muted-foreground">Updated 2 hours ago</p>
-                    </div>
-                  </div>
-                  <div className="text-sm font-bold text-green-600">92% Match</div>
+            {/* Estado Vazio (Placeholder) */}
+            <div className="flex flex-col items-center justify-center py-8 text-center space-y-3">
+               <div className="bg-slate-50 p-3 rounded-full">
+                  <FileText className="h-6 w-6 text-slate-400" />
                </div>
-
-               {/* Item 2 */}
-               <div className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
-                  <div className="flex items-center space-x-4">
-                    <div className="bg-blue-100 p-2 rounded-full">
-                        <FileText className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <div>
-                        <p className="text-sm font-medium leading-none">Product Manager - Amazon</p>
-                        <p className="text-xs text-muted-foreground">Updated yesterday</p>
-                    </div>
-                  </div>
-                  <div className="text-sm font-bold text-amber-600">78% Match</div>
+               <div>
+                 <p className="text-sm font-medium text-slate-900">No optimizations yet</p>
+                 <p className="text-xs text-slate-500 max-w-[200px] mx-auto mt-1">
+                   Start by clicking "New Optimization" to tailor your resume for a job.
+                 </p>
                </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Card Lateral: Quick Tips ou Upgrade (Ocupa 3 colunas) */}
+        {/* Card Lateral: Quick Tips */}
         <Card className="col-span-3">
           <CardHeader>
             <CardTitle>Resume Tips</CardTitle>
