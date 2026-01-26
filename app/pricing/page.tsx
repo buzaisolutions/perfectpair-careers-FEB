@@ -1,18 +1,115 @@
+'use client'
+
+import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { SiteFooter } from "@/components/site-footer"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
-import { Check, ArrowLeft, ArrowRight, FileText, Mail, Infinity as InfinityIcon } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Check, ArrowLeft, Zap, Tag, Loader2 } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { toast } from "sonner" // Certifique-se de ter o sonner ou use alert()
+
+// --- CONFIGURAÇÃO DOS PLANOS ---
+const PLANS = [
+  {
+    id: "starter",
+    name: "Starter Pack",
+    description: "Perfect for a specific application.",
+    price: 9.90,
+    credits: 5,
+    features: ["5 Credits", "PDF Export included", "Basic ATS Analysis"],
+    highlight: false,
+  },
+  {
+    id: "seeker",
+    name: "Job Seeker",
+    description: "Best for active job hunting.",
+    price: 29.90,
+    credits: 20,
+    features: ["20 Credits", "Priority AI Processing", "Advanced ATS Scoring", "Editable DOCX Export"],
+    highlight: true,
+  },
+  {
+    id: "pro",
+    name: "Career Pro",
+    description: "For long-term career management.",
+    price: 49.90,
+    credits: 50,
+    features: ["50 Credits", "All Job Seeker features", "LinkedIn Optimization Tips", "Cover Letter Generation"],
+    highlight: false,
+  },
+]
+// -----------------------------------------------------------
 
 export default function PricingPage() {
+  const router = useRouter()
+  const [couponCode, setCouponCode] = useState("")
+  const [discount, setDiscount] = useState(0)
+  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
+  
+  // Estado para controlar qual botão está carregando
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null)
+
+  const applyCoupon = () => {
+    if (couponCode.toUpperCase() === "PROMO20") {
+      setDiscount(0.2)
+      setMessage({ text: "Coupon applied! 20% off unlocked.", type: "success" })
+    } else {
+      setDiscount(0)
+      setMessage({ text: "Invalid or expired coupon code.", type: "error" })
+    }
+  }
+
+  // FUNÇÃO QUE CHAMA O STRIPE
+  const handleCheckout = async (plan: typeof PLANS[0]) => {
+    try {
+      setLoadingPlan(plan.id)
+      
+      const finalPrice = discount > 0 ? (plan.price * (1 - discount)) : plan.price
+
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId: plan.id,
+          name: plan.name,
+          price: finalPrice,
+          credits: plan.credits,
+        }),
+      })
+
+      if (response.status === 401) {
+        // Se não estiver logado, manda pro login
+        router.push(`/auth/signin?callbackUrl=/pricing`)
+        return
+      }
+
+      const data = await response.json()
+
+      if (data.url) {
+        // Redireciona para o Stripe
+        window.location.href = data.url
+      } else {
+        throw new Error("Failed to create checkout session")
+      }
+
+    } catch (error) {
+      console.error(error)
+      alert("Something went wrong. Please try again.")
+    } finally {
+      setLoadingPlan(null)
+    }
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
       <Header />
       
-      <main className="flex-1 container py-12 max-w-7xl">
+      <main className="flex-1 container py-12 max-w-6xl">
         
-        {/* Link de Voltar */}
         <div className="mb-8">
           <Link href="/dashboard" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -20,168 +117,118 @@ export default function PricingPage() {
           </Link>
         </div>
 
-        {/* Grid de Preços */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-          
-          {/* --- PLANO 1: Resume Optimization --- */}
-          <Card className="flex flex-col border-slate-200 shadow-sm hover:shadow-md transition-shadow h-full">
-            <CardHeader className="text-center pb-2">
-              <div className="mx-auto bg-purple-100 p-4 rounded-full mb-4 w-fit">
-                <FileText className="h-8 w-8 text-purple-600" />
-              </div>
-              <h2 className="text-xl font-bold">Resume Optimization</h2>
-              <p className="text-sm text-muted-foreground">Perfect for quick optimization</p>
-            </CardHeader>
-            <CardContent className="flex-1 text-center">
-              <div className="text-4xl font-bold mb-8">€9.99</div>
-              
-              <ul className="space-y-4 text-sm text-left px-4">
-                <li className="flex items-start">
-                  <Check className="h-5 w-5 text-green-500 mr-3 shrink-0" />
-                  <span>ATS analysis of your resume</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="h-5 w-5 text-green-500 mr-3 shrink-0" />
-                  <span>AI-powered optimization</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="h-5 w-5 text-green-500 mr-3 shrink-0" />
-                  <span>Compatibility score</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="h-5 w-5 text-green-500 mr-3 shrink-0" />
-                  <span>Improvement suggestions</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="h-5 w-5 text-green-500 mr-3 shrink-0" />
-                  <span>PDF download</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="h-5 w-5 text-green-500 mr-3 shrink-0" />
-                  <span>Skills verification system</span>
-                </li>
-              </ul>
-            </CardContent>
-            <CardFooter className="pt-4">
-              <Button className="w-full group" variant="outline">
-                Select Plan 
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Button>
-            </CardFooter>
-          </Card>
-
-          {/* --- PLANO 2: Resume + Cover Letter (Destaque) --- */}
-          <Card className="flex flex-col border-2 border-purple-600 shadow-xl relative bg-white h-full scale-105 z-10">
-            {/* Badge "Most Popular" */}
-            <div className="absolute -top-4 left-0 right-0 flex justify-center">
-              <span className="bg-purple-600 text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wide">
-                Most Popular
-              </span>
-            </div>
-
-            <CardHeader className="text-center pb-2 pt-8">
-              <div className="mx-auto bg-purple-100 p-4 rounded-full mb-4 w-fit">
-                <Mail className="h-8 w-8 text-purple-600" />
-              </div>
-              <h2 className="text-xl font-bold">Resume + Cover Letter</h2>
-              <p className="text-sm text-muted-foreground px-4">Complete technical optimization for both documents</p>
-            </CardHeader>
-            <CardContent className="flex-1 text-center">
-              <div className="text-4xl font-bold mb-8">€14.99</div>
-              
-              <ul className="space-y-4 text-sm text-left px-4 font-medium text-slate-700">
-                <li className="flex items-start">
-                  <Check className="h-5 w-5 text-green-500 mr-3 shrink-0" />
-                  <span>Everything from previous plan</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="h-5 w-5 text-green-500 mr-3 shrink-0" />
-                  <span>Optimized cover letter</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="h-5 w-5 text-green-500 mr-3 shrink-0" />
-                  <span>Job alignment</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="h-5 w-5 text-green-500 mr-3 shrink-0" />
-                  <span>Advanced personalization</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="h-5 w-5 text-green-500 mr-3 shrink-0" />
-                  <span>Professional templates</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="h-5 w-5 text-green-500 mr-3 shrink-0" />
-                  <span>Detailed feedback</span>
-                </li>
-              </ul>
-            </CardContent>
-            <CardFooter className="pt-4">
-              <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white group">
-                Select Plan
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Button>
-            </CardFooter>
-          </Card>
-
-          {/* --- PLANO 3: Monthly Plan --- */}
-          <Card className="flex flex-col border-slate-200 shadow-sm hover:shadow-md transition-shadow h-full">
-            <CardHeader className="text-center pb-2">
-              <div className="mx-auto bg-purple-100 p-4 rounded-full mb-4 w-fit">
-                <InfinityIcon className="h-8 w-8 text-purple-600" />
-              </div>
-              <h2 className="text-xl font-bold">Monthly Plan</h2>
-              <p className="text-sm text-muted-foreground">For active job seekers</p>
-            </CardHeader>
-            <CardContent className="flex-1 text-center">
-              <div className="text-4xl font-bold mb-8">
-                €29.99 <span className="text-base font-normal text-muted-foreground">/mês</span>
-              </div>
-              
-              <ul className="space-y-4 text-sm text-left px-4">
-                <li className="flex items-start">
-                  <Check className="h-5 w-5 text-green-500 mr-3 shrink-0" />
-                  <span>Unlimited optimizations</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="h-5 w-5 text-green-500 mr-3 shrink-0" />
-                  <span>Everything from previous plans</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="h-5 w-5 text-green-500 mr-3 shrink-0" />
-                  <span>Priority support</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="h-5 w-5 text-green-500 mr-3 shrink-0" />
-                  <span>Complete history</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="h-5 w-5 text-green-500 mr-3 shrink-0" />
-                  <span>Multiple versions</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="h-5 w-5 text-green-500 mr-3 shrink-0" />
-                  <span>Automatic updates</span>
-                </li>
-              </ul>
-            </CardContent>
-            <CardFooter className="pt-4">
-              <Button className="w-full group" variant="outline">
-                Select Plan
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Button>
-            </CardFooter>
-          </Card>
-
-        </div>
-
-        {/* Aviso Legal do Rodapé */}
-        <div className="mt-16 text-center">
-          <p className="text-sm text-muted-foreground">
-            All plans include ethical AI formatting that works with your actual qualifications. This service optimizes document structure, not hiring outcomes.
+        <div className="text-center space-y-4 mb-8">
+          <h1 className="text-4xl font-bold tracking-tight lg:text-5xl">
+            Simple, Transparent Pricing
+          </h1>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Choose the credit pack that fits your needs. 
+            Credits never expire.
           </p>
         </div>
 
+        {/* CUPOM */}
+        <div className="max-w-md mx-auto mb-12">
+          <div className="flex space-x-2">
+            <div className="relative flex-1">
+              <Tag className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Enter coupon code (Try: PROMO20)" 
+                className="pl-9 bg-white"
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value)}
+              />
+            </div>
+            <Button onClick={applyCoupon} variant="secondary">Apply</Button>
+          </div>
+          {message && (
+            <p className={cn("text-sm mt-2 text-center font-medium", 
+              message.type === 'success' ? "text-green-600" : "text-red-500"
+            )}>
+              {message.text}
+            </p>
+          )}
+        </div>
+
+        {/* CARDS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+          
+          {PLANS.map((plan) => {
+            const finalPrice = discount > 0 ? (plan.price * (1 - discount)).toFixed(2) : plan.price
+            const isLoading = loadingPlan === plan.id
+
+            return (
+              <Card 
+                key={plan.id}
+                className={cn(
+                  "flex flex-col transition-all duration-200",
+                  plan.highlight 
+                    ? "border-primary shadow-lg scale-105 relative bg-white z-10" 
+                    : "border-slate-200 shadow-sm hover:shadow-md"
+                )}
+              >
+                {plan.highlight && (
+                  <div className="absolute -top-4 left-0 right-0 flex justify-center">
+                    <span className="bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+                      Most Popular
+                    </span>
+                  </div>
+                )}
+
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className={cn("text-xl", plan.highlight ? "text-primary" : "")}>
+                      {plan.name}
+                    </CardTitle>
+                    {plan.highlight && <Zap className="h-5 w-5 text-yellow-500 fill-yellow-500" />}
+                  </div>
+                  <CardDescription>{plan.description}</CardDescription>
+                </CardHeader>
+                
+                <CardContent className="flex-1">
+                  <div className="mb-6">
+                    {discount > 0 && (
+                      <span className="text-lg text-muted-foreground line-through mr-2">
+                        ${plan.price}
+                      </span>
+                    )}
+                    <span className="text-4xl font-bold">
+                      ${finalPrice}
+                    </span>
+                  </div>
+                  
+                  <ul className="space-y-3 text-sm text-slate-600 font-medium">
+                    {plan.features.map((feature, index) => (
+                      <li key={index} className="flex items-center">
+                        <Check className={cn("h-4 w-4 mr-2", plan.highlight ? "text-primary" : "text-green-500")} />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+                
+                <CardFooter>
+                  <Button 
+                    className="w-full" 
+                    variant={plan.highlight ? "default" : "outline"}
+                    onClick={() => handleCheckout(plan)}
+                    disabled={!!loadingPlan} // Desabilita se qualquer um estiver carregando
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      `Choose ${plan.name.split(' ')[0]}`
+                    )}
+                  </Button>
+                </CardFooter>
+              </Card>
+            )
+          })}
+
+        </div>
       </main>
       
       <SiteFooter />
