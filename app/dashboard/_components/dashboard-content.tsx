@@ -1,23 +1,28 @@
 'use client'
 
 import Link from "next/link"
-import Image from "next/image" // Importamos o Image
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Sparkles, FileText, Clock, TrendingUp, Plus, CreditCard } from "lucide-react"
 
+// AQUI ESTAVA O ERRO: Adicionamos firstName, lastName e credits na tipagem
 interface DashboardContentProps {
   user?: {
+    id?: string
     name?: string | null
     email?: string | null
     image?: string | null
+    firstName?: string | null // Novo
+    lastName?: string | null  // Novo
+    credits?: number          // Novo
   }
 }
 
 export function DashboardContent({ user }: DashboardContentProps) {
-  // Lógica para pegar apenas o primeiro nome
-  // Se o nome for "Roberto Carlos", ele pega "Roberto". Se não tiver nome, usa "User".
-  const firstName = user?.name ? user.name.split(' ')[0] : 'User'
+  // Agora o TypeScript aceita user.firstName
+  const firstName = user?.firstName || user?.name?.split(' ')[0] || 'User'
+  const credits = user?.credits || 0
 
   return (
     <div className="container py-8 max-w-7xl space-y-8">
@@ -25,7 +30,6 @@ export function DashboardContent({ user }: DashboardContentProps) {
       {/* 1. LOGO E CABEÇALHO */}
       <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-4">
         <div className="space-y-4">
-          {/* Logo Adicionada Aqui */}
           <div className="block">
             <Image 
               src="/logo.png" 
@@ -39,14 +43,12 @@ export function DashboardContent({ user }: DashboardContentProps) {
           
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-            {/* Saudação Personalizada com Primeiro Nome */}
             <p className="text-muted-foreground mt-1">
               Welcome back, <span className="font-semibold text-foreground">{firstName}</span>! Here's an overview of your career tools.
             </p>
           </div>
         </div>
 
-        {/* Botões de Ação */}
         <div className="flex space-x-2">
            <Link href="/pricing">
             <Button variant="outline">
@@ -63,7 +65,7 @@ export function DashboardContent({ user }: DashboardContentProps) {
         </div>
       </div>
 
-      {/* 2. Cards de Estatísticas (KPIs) */}
+      {/* 2. Cards de Estatísticas */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -104,7 +106,8 @@ export function DashboardContent({ user }: DashboardContentProps) {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
+            {/* Exibe os créditos reais */}
+            <div className="text-2xl font-bold">{credits}</div>
             <p className="text-xs text-muted-foreground">
               <Link href="/pricing" className="text-primary hover:underline">Buy more credits</Link>
             </p>
@@ -112,10 +115,8 @@ export function DashboardContent({ user }: DashboardContentProps) {
         </Card>
       </div>
 
-      {/* 3. Área Principal: Histórico Recente e Dicas */}
+      {/* 3. Área Principal */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        
-        {/* Tabela de Histórico */}
         <Card className="col-span-4">
           <CardHeader>
             <CardTitle>Recent Optimizations</CardTitle>
@@ -124,7 +125,6 @@ export function DashboardContent({ user }: DashboardContentProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Estado Vazio (Placeholder) */}
             <div className="flex flex-col items-center justify-center py-8 text-center space-y-3">
                <div className="bg-slate-50 p-3 rounded-full">
                   <FileText className="h-6 w-6 text-slate-400" />
@@ -139,7 +139,6 @@ export function DashboardContent({ user }: DashboardContentProps) {
           </CardContent>
         </Card>
 
-        {/* Card Lateral: Quick Tips */}
         <Card className="col-span-3">
           <CardHeader>
             <CardTitle>Resume Tips</CardTitle>
