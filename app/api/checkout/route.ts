@@ -38,12 +38,12 @@ export async function POST(req: Request) {
       },
       resume_cover: {
         priceId: process.env.STRIPE_PRICE_RESUME_COVER || "",
-        credits: 2,
+        credits: 5,
         paymentType: "ONE_TIME_RESUME_COVER",
       },
       monthly: {
         priceId: process.env.STRIPE_PRICE_MONTHLY || "",
-        recurring: true,
+        credits: 10,
         paymentType: "MONTHLY_SUBSCRIPTION",
       },
     }
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
     const stripeSession = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [{ price: plan.priceId, quantity: 1 }],
-      mode: plan.recurring ? "subscription" : "payment",
+      mode: "payment",
       success_url: `${appUrl}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/pricing?canceled=true`,
       customer_email: session.user.email || undefined,

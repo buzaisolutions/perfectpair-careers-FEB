@@ -10,8 +10,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { 
   CreditCard, 
   FileText, 
-  Mail, 
-  Infinity, 
+  Mail,
+  Infinity,
   Check,
   Clock,
   AlertCircle,
@@ -43,16 +43,14 @@ interface BillingDate {
 const plans = [
   {
     id: 'resume', // VAI CHAMAR O STRIPE_PRICE_BASIC
-    name: 'Resume Optimization',
+    name: 'Starter Credit',
     price: '9.99',
-    description: 'Perfect for a quick optimization',
+    description: 'Best for one quick optimization',
     features: [
-      'ATS analysis of your resume',
-      'AI-powered optimization',
-      'Compatibility score',
-      'Improvement suggestions',
-      'PDF download',
-      'Multilingual support'
+      '1 credit included',
+      'Allows 1 single optimization only',
+      'ATS analysis + AI optimization',
+      'DOCX download'
     ],
     icon: FileText,
     credits: 1,
@@ -60,38 +58,34 @@ const plans = [
   },
   {
     id: 'resume_cover', // VAI CHAMAR O STRIPE_PRICE_PRO
-    name: 'Resume + Cover Letter',
+    name: 'Growth Pack',
     price: '14.99',
-    description: 'Complete combo to stand out',
+    description: 'More optimizations for active applications',
     features: [
-      'Everything from previous plan',
-      'Optimized cover letter',
-      'Alignment with job posting',
-      'Advanced personalization',
-      'Professional templates',
-      'Detailed feedback'
+      '5 credits included',
+      'Up to 5 optimizations',
+      'ATS analysis + AI optimization',
+      'DOCX download'
     ],
     icon: Mail,
-    credits: 2,
+    credits: 5,
     paymentType: 'ONE_TIME_RESUME_COVER',
     popular: true
   },
   {
     id: 'monthly', // VAI CHAMAR O STRIPE_PRICE_MAX (Assinatura)
-    name: 'Monthly Plan',
+    name: 'Pro Pack',
     price: '29.99',
-    description: 'For those actively searching',
+    description: 'Highest credit pack',
     features: [
-      'Unlimited optimizations',
-      'Everything from previous plans',
-      'Priority support',
-      'Complete history',
-      'Multiple versions',
-      'Automatic updates'
+      '10 credits included',
+      'Up to 10 optimizations',
+      'ATS analysis + AI optimization',
+      'DOCX download'
     ],
     icon: Infinity,
-    recurring: true,
-    paymentType: 'MONTHLY_SUBSCRIPTION'
+    credits: 10,
+    paymentType: 'CREDIT_PACK'
   }
 ]
 
@@ -303,13 +297,10 @@ export function BillingContent() {
                         <div className="mt-4">
                           <div className="flex items-baseline justify-center">
                             <span className="text-4xl font-bold text-gray-900">€{plan?.price}</span>
-                            {plan?.recurring && <span className="text-base text-gray-500 ml-1">/month</span>}
                           </div>
-                          {!plan?.recurring && (
-                            <p className="text-sm text-gray-500 mt-1">
-                              {plan?.credits} credit{(plan?.credits && plan.credits > 1) ? 's' : ''}
-                            </p>
-                          )}
+                          <p className="text-sm text-gray-500 mt-1">
+                            {plan?.credits} credit{(plan?.credits && plan.credits > 1) ? 's' : ''}
+                          </p>
                         </div>
                       </CardHeader>
                       
@@ -339,7 +330,7 @@ export function BillingContent() {
                               Processing...
                             </>
                           ) : (
-                            `${plan?.recurring ? 'Subscribe' : 'Purchase'} Now`
+                            'Purchase Now'
                           )}
                         </Button>
                       </CardContent>

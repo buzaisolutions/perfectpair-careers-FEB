@@ -15,29 +15,29 @@ import { cn } from "@/lib/utils"
 const PLANS = [
   {
     id: "resume",
-    name: "Resume Optimization",
-    description: "Optimize a single resume for a specific job.",
+    name: "Starter Credit",
+    description: "One fast optimization for a specific job.",
     price: 9.99, // Valor em Euro
-    credits: 5,
-    features: ["5 Credits", "PDF Export included", "Basic ATS Analysis"],
+    credits: 1,
+    features: ["1 Credit", "Only 1 optimization", "ATS Analysis", "DOCX Export"],
     highlight: false,
   },
   {
     id: "resume_cover",
-    name: "Resume + Cover Letter",
-    description: "Full application package optimization.",
-    price: 19.99, // Valor em Euro
-    credits: 20,
-    features: ["20 Credits", "Cover Letter Generation", "Priority Processing", "Editable DOCX Export"],
+    name: "Growth Pack",
+    description: "More credits for active applications.",
+    price: 14.99, // Valor em Euro
+    credits: 5,
+    features: ["5 Credits", "Up to 5 optimizations", "ATS Analysis", "DOCX Export"],
     highlight: true,
   },
   {
     id: "monthly",
-    name: "Career Growth",
-    description: "Best for active job seekers applying often.",
+    name: "Pro Pack",
+    description: "Highest one-time credit package.",
     price: 29.99, // Valor em Euro
-    credits: 50,
-    features: ["50 Credits", "LinkedIn Optimization", "All Premium Features", "24/7 Support"],
+    credits: 10,
+    features: ["10 Credits", "Up to 10 optimizations", "ATS Analysis", "DOCX Export"],
     highlight: false,
   },
 ]
@@ -63,17 +63,11 @@ export default function PricingPage() {
     try {
       setLoadingPlan(plan.id)
       
-      const finalPrice = discount > 0 ? (plan.price * (1 - discount)) : plan.price
-
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          planId: plan.id,
-          name: plan.name,
-          price: finalPrice,
-          credits: plan.credits,
-          currency: "eur" // Força o envio em Euro para a API
+          planId: plan.id
         }),
       })
 
