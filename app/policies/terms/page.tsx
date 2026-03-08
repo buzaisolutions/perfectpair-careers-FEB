@@ -3,7 +3,8 @@
 import { Header } from '@/components/header'
 import { SiteFooter } from '@/components/site-footer'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { FileText, CheckCircle, XCircle, AlertTriangle } from 'lucide-react'
+import Link from 'next/link'
+import { ArrowLeft, FileText, CheckCircle, XCircle, AlertTriangle } from 'lucide-react'
 
 export default function TermsPage() {
   return (
@@ -11,6 +12,10 @@ export default function TermsPage() {
       <Header />
       
       <main className="container mx-auto max-w-4xl px-4 py-12">
+        <Link href="/dashboard" className="mb-4 inline-flex items-center text-sm text-gray-500 hover:text-gray-900">
+          <ArrowLeft className="mr-1 h-4 w-4" />
+          Back to Dashboard
+        </Link>
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
             <FileText className="h-8 w-8 text-blue-600" />

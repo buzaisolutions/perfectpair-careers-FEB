@@ -23,6 +23,9 @@ export function SiteFooter() {
             
             {/* Navigation Links */}
             <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-6">
+              <Link href="/dashboard" className="text-sm text-gray-600 hover:text-primary">
+                Dashboard
+              </Link>
               <Link href="/" className="text-sm text-gray-600 hover:text-primary">
                 Home
               </Link>

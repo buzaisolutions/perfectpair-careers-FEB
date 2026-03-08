@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import Stripe from "stripe"
+import { getSettingOrEnv } from "@/lib/runtime-settings"
 
 // Configuração do Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -23,26 +24,35 @@ export async function POST(req: Request) {
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    const stripeSecret = await getSettingOrEnv("STRIPE_SECRET_KEY", process.env.STRIPE_SECRET_KEY)
+    if (!stripeSecret) {
+      return NextResponse.json({ error: "Stripe secret key is not configured" }, { status: 500 })
+    }
+
+    const stripe = new Stripe(stripeSecret, {
       typescript: true,
     })
+
+    const priceResume = await getSettingOrEnv("STRIPE_PRICE_RESUME", process.env.STRIPE_PRICE_RESUME)
+    const priceResumeCover = await getSettingOrEnv("STRIPE_PRICE_RESUME_COVER", process.env.STRIPE_PRICE_RESUME_COVER)
+    const priceMonthly = await getSettingOrEnv("STRIPE_PRICE_MONTHLY", process.env.STRIPE_PRICE_MONTHLY)
 
     const plans: Record<
       string,
       { priceId: string; credits?: number; recurring?: boolean; paymentType: string }
     > = {
       resume: {
-        priceId: process.env.STRIPE_PRICE_RESUME || "",
+        priceId: priceResume || "",
         credits: 1,
         paymentType: "ONE_TIME_RESUME",
       },
       resume_cover: {
-        priceId: process.env.STRIPE_PRICE_RESUME_COVER || "",
+        priceId: priceResumeCover || "",
         credits: 5,
         paymentType: "ONE_TIME_RESUME_COVER",
       },
       monthly: {
-        priceId: process.env.STRIPE_PRICE_MONTHLY || "",
+        priceId: priceMonthly || "",
         credits: 10,
         paymentType: "MONTHLY_SUBSCRIPTION",
       },
@@ -66,6 +76,15 @@ export async function POST(req: Request) {
         credits: String(plan.credits || 0),
         planId,
         paymentType: plan.paymentType,
+      },
+      payment_intent_data: {
+        metadata: {
+          userId: session.user.id || "unknown",
+          userEmail: session.user.email || "unknown",
+          credits: String(plan.credits || 0),
+          planId,
+          paymentType: plan.paymentType,
+        },
       },
     })
 

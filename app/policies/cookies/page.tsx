@@ -1,6 +1,13 @@
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
+
 export default function CookiesPage() {
   return (
     <div className="container max-w-4xl py-12">
+      <Link href="/dashboard" className="mb-4 inline-flex items-center text-sm text-gray-500 hover:text-gray-900">
+        <ArrowLeft className="mr-1 h-4 w-4" />
+        Back to Dashboard
+      </Link>
       <h1 className="text-4xl font-bold mb-8">Cookie Policy</h1>
       <div className="prose prose-slate max-w-none text-muted-foreground">
         

@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db'
 import { downloadFile } from '@/lib/s3'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import mammoth from 'mammoth'
+import { getSettingOrEnv } from '@/lib/runtime-settings'
 
 export const dynamic = 'force-dynamic'
 
@@ -155,16 +156,19 @@ export async function POST(request: NextRequest) {
         send(controller, { status: 'initial_score', score: initialScore })
         send(controller, { status: 'processing', message: 'Optimizing with AI...' })
 
-        const geminiApiKey =
-          process.env.GEMINI_API_KEY ||
-          process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
-          process.env.GOOGLE_API_KEY
+        const geminiApiKey = await getSettingOrEnv(
+          'GEMINI_API_KEY',
+          process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GOOGLE_API_KEY
+        )
         if (!geminiApiKey) {
           throw new Error('Gemini API key is not configured')
         }
 
         const genAI = new GoogleGenerativeAI(geminiApiKey)
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+        const modelName = (await getSettingOrEnv('AI_MODEL', 'gemini-2.5-flash')) || 'gemini-2.5-flash'
+        const model = genAI.getGenerativeModel({ model: modelName })
+        const resumePromptExtra = (await getSettingOrEnv('OPTIMIZE_RESUME_PROMPT_EXTRA', '')) || ''
+        const coverPromptExtra = (await getSettingOrEnv('OPTIMIZE_COVER_PROMPT_EXTRA', '')) || ''
 
         const isCoverLetterOnly = optimizationType === 'COVER_LETTER_ONLY'
         const includeCoverLetter = optimizationType === 'RESUME_AND_COVER_LETTER'
@@ -179,6 +183,9 @@ JOB DESCRIPTION: ${jobDescription.substring(0, 3000)}
 RESUME: ${resumeText.substring(0, 5000)}
 
 Write a professional cover letter (3-4 paragraphs). Be specific and compelling. Output plain text only — no markdown, no asterisks, no special characters.`
+          if (coverPromptExtra) {
+            prompt += `\n\nADDITIONAL ADMIN INSTRUCTIONS:\n${coverPromptExtra}`
+          }
         } else {
           prompt = `You are an expert ATS resume optimizer. Rewrite the resume to maximize ATS score for the target job.
 
@@ -203,6 +210,9 @@ CRITICAL INSTRUCTIONS FOR ATS OPTIMIZATION:
 11. NEVER remove numbers, dates, or metrics from the original resume
 12. ENHANCE the resume by adding more quantifiable achievements where possible
 ${includeCoverLetter ? '\nAlso append a cover letter after the resume, separated by "---COVER LETTER---"' : ''}`
+          if (resumePromptExtra) {
+            prompt += `\n\nADDITIONAL ADMIN INSTRUCTIONS:\n${resumePromptExtra}`
+          }
         }
 
         send(controller, { status: 'processing', message: 'Generating optimized content...' })

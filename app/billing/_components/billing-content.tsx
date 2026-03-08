@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ChangeEvent } from 'react'
 import { useSession } from 'next-auth/react'
 import { Header } from '@/components/header'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Input } from '@/components/ui/input'
 import { 
   CreditCard, 
   FileText, 
@@ -95,6 +96,8 @@ export function BillingContent() {
   const [billingDate, setBillingDate] = useState<BillingDate | null>(null)
   const [loading, setLoading] = useState(true)
   const [processingPayment, setProcessingPayment] = useState<string | null>(null)
+  const [couponCode, setCouponCode] = useState('')
+  const [redeemingCoupon, setRedeemingCoupon] = useState(false)
 
   useEffect(() => {
     fetchBillingDate()
@@ -111,6 +114,27 @@ export function BillingContent() {
       console.error('Error fetching billing data:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleRedeemCoupon = async () => {
+    if (!couponCode.trim()) return
+    setRedeemingCoupon(true)
+    try {
+      const response = await fetch('/api/coupons/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: couponCode.trim().toUpperCase() }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data?.error || 'Could not redeem coupon')
+      toast({ title: 'Coupon redeemed!', description: `+${data.granted} credits added to your account.` })
+      setCouponCode('')
+      await fetchBillingDate()
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Coupon error', description: error.message })
+    } finally {
+      setRedeemingCoupon(false)
     }
   }
 
@@ -256,6 +280,24 @@ export function BillingContent() {
           </div>
 
           {/* Pricing Plans */}
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Redeem Coupon</CardTitle>
+              <CardDescription>Apply a coupon code to receive bonus credits</CardDescription>
+            </CardHeader>
+            <CardContent className="flex gap-3">
+              <Input
+                placeholder="Enter coupon code"
+                value={couponCode}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setCouponCode(e.target.value)}
+                className="max-w-sm"
+              />
+              <Button onClick={handleRedeemCoupon} disabled={redeemingCoupon || !couponCode.trim()}>
+                {redeemingCoupon ? 'Redeeming...' : 'Redeem'}
+              </Button>
+            </CardContent>
+          </Card>
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

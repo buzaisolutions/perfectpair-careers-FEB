@@ -2,18 +2,22 @@ import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
-
-// CONFIGURAÇÃO CORRIGIDA (Sem travar versão)
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  typescript: true,
-});
-
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+import { getSettingOrEnv } from '@/lib/runtime-settings';
 
 export async function POST(req: Request) {
   try {
     const body = await req.text();
     const signature = headers().get('stripe-signature') as string;
+
+    const stripeSecret = await getSettingOrEnv('STRIPE_SECRET_KEY', process.env.STRIPE_SECRET_KEY)
+    const webhookSecret = await getSettingOrEnv('STRIPE_WEBHOOK_SECRET', process.env.STRIPE_WEBHOOK_SECRET)
+    if (!stripeSecret || !webhookSecret) {
+      return NextResponse.json({ error: 'Stripe config missing' }, { status: 500 })
+    }
+
+    const stripe = new Stripe(stripeSecret, {
+      typescript: true,
+    });
 
     let event: Stripe.Event;
 
@@ -112,6 +116,52 @@ export async function POST(req: Request) {
             data: { credits: 0 },
           });
         }
+        break;
+      }
+
+      case 'payment_intent.payment_failed': {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        let userId = paymentIntent.metadata?.userId;
+        let paymentType = paymentIntent.metadata?.paymentType as
+          | 'ONE_TIME_RESUME'
+          | 'ONE_TIME_RESUME_COVER'
+          | 'MONTHLY_SUBSCRIPTION'
+          | undefined;
+        let planId = paymentIntent.metadata?.planId;
+        let credits = paymentIntent.metadata?.credits;
+
+        // Fallback for old checkout sessions created before payment_intent metadata propagation
+        if (!userId) {
+          const sessions = await stripe.checkout.sessions.list({
+            payment_intent: paymentIntent.id,
+            limit: 1,
+          });
+          const checkoutSession = sessions.data?.[0];
+          if (checkoutSession?.metadata) {
+            userId = checkoutSession.metadata.userId;
+            paymentType = (checkoutSession.metadata.paymentType as any) || paymentType;
+            planId = checkoutSession.metadata.planId || planId;
+            credits = checkoutSession.metadata.credits || credits;
+          }
+        }
+
+        if (!userId) break;
+
+        await prisma.payment.create({
+          data: {
+            userId,
+            // Keep null to avoid collisions with a later successful attempt using the same PaymentIntent id.
+            stripePaymentId: null,
+            amount: paymentIntent.amount || 0,
+            paymentType: paymentType || 'ONE_TIME_RESUME',
+            status: 'FAILED',
+            creditsGranted: parseInt(credits || '0', 10) || undefined,
+            description:
+              paymentIntent.last_payment_error?.message ||
+              `Payment failed for ${planId || 'unknown-plan'}`,
+          },
+        });
+
         break;
       }
 
