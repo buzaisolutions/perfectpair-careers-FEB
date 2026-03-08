@@ -56,7 +56,14 @@ export function OptimizeContent() {
   const fetchInitialData = async () => {
     try {
       const [docRes, credRes] = await Promise.all([fetch('/api/documents'), fetch('/api/dashboard/stats')])
-      if (docRes.ok) { const d = await docRes.json(); setDocuments(d?.documents || []) }
+      if (docRes.ok) {
+        const d = await docRes.json()
+        const docs = d?.documents || []
+        setDocuments(docs)
+        if (docs.length > 0) {
+          setFormData(prev => ({ ...prev, selectedDocument: prev.selectedDocument || docs[0].id }))
+        }
+      }
       if (credRes.ok) { const d = await credRes.json(); setUserCredits(d?.credits || 0) }
     } catch (e) { console.error(e) } finally { setLoading(false) }
   }

@@ -16,6 +16,10 @@ export const config = {
   // 2. /api/optimize (para ninguém usar sua IA de graça via Postman/Curl)
   matcher: [
     "/dashboard/:path*",
-    "/api/optimize/:path*"
+    "/optimize/:path*",
+    "/profile/:path*",
+    "/billing/:path*",
+    "/api/optimize/:path*",
+    "/api/documents/:path*"
   ]
 }

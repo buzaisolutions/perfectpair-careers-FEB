@@ -4,7 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Sparkles, FileText, Clock, TrendingUp, Plus, CreditCard, User, Settings } from "lucide-react"
+import { FileText, TrendingUp, Plus, CreditCard, User, Settings } from "lucide-react"
 
 // AQUI ESTÁ A SOLUÇÃO: 'any' permite que qualquer dado passe sem erro de build
 interface DashboardContentProps {
@@ -15,15 +15,25 @@ export function DashboardContent({ user }: DashboardContentProps) {
   // Lógica segura para evitar tela branca
   const firstName = user?.firstName || user?.name?.split(' ')[0] || 'User'
   const credits = user?.credits ?? 0 // Se for null ou undefined, usa 0
+  const hasCredits = credits > 0
 
   return (
-    <div className="container py-8 max-w-7xl space-y-8">
+    <div className="container mx-auto w-full max-w-7xl py-8 space-y-8">
       
       {/* HEADER */}
       <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-4">
         <div className="space-y-4">
           <div className="block">
-             <h2 className="text-2xl font-bold text-primary">PerfectPair Careers</h2>
+            <Link href="/" className="inline-flex items-center">
+              <Image
+                src="/logo.png"
+                alt="PerfectPair Careers"
+                width={180}
+                height={50}
+                className="h-10 w-auto object-contain"
+                priority
+              />
+            </Link>
           </div>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
@@ -41,9 +51,9 @@ export function DashboardContent({ user }: DashboardContentProps) {
             </Button>
           </Link>
           <Link href="/optimize">
-            <Button className="bg-primary hover:bg-primary/90 text-white">
+            <Button className="bg-primary hover:bg-primary/90 text-white" disabled={!hasCredits}>
               <Plus className="mr-2 h-4 w-4" />
-              New Optimization
+              {hasCredits ? 'New Optimization' : 'No Credits Available'}
             </Button>
           </Link>
         </div>
@@ -122,7 +132,9 @@ export function DashboardContent({ user }: DashboardContentProps) {
                  </p>
                </div>
                <Link href="/optimize">
-                 <Button className="mt-2">Start Optimization</Button>
+                 <Button className="mt-2" disabled={!hasCredits}>
+                   {hasCredits ? 'Start Optimization' : 'Buy Credits First'}
+                 </Button>
                </Link>
             </div>
           </CardContent>

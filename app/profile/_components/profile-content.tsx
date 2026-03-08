@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Header } from '@/components/header'
+import { SiteFooter } from '@/components/site-footer'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,7 +19,8 @@ import {
   Download, 
   Trash2, 
   Save, 
-  Linkedin
+  Linkedin,
+  ArrowLeft
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast' 
 import { motion } from 'framer-motion'
@@ -45,6 +48,17 @@ interface Document {
   createdAt: string
 }
 
+interface RecentOptimization {
+  id: string
+  optimizedContent: string
+  atsScore?: number | null
+  createdAt: string
+  jobPosting?: {
+    title?: string | null
+    company?: string | null
+  } | null
+}
+
 export function ProfileContent() {
   const { data: session, update } = useSession()
   const { toast } = useToast()
@@ -65,6 +79,7 @@ export function ProfileContent() {
   })
 
   const [documents, setDocuments] = useState<Document[]>([])
+  const [recentOptimizations, setRecentOptimizations] = useState<RecentOptimization[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -103,6 +118,7 @@ export function ProfileContent() {
             professionalTitle: data.professionalTitle || '',
             summary: data.summary || ''
         })
+        setRecentOptimizations(data.recentOptimizations || [])
       }
     } catch (error) {
       console.error('Error fetching profile:', error)
@@ -264,6 +280,20 @@ export function ProfileContent() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
+  const downloadOptimizedResume = (optimization: RecentOptimization) => {
+    const title = optimization.jobPosting?.title || 'optimized-resume'
+    const safeName = title.replace(/[^a-z0-9]/gi, '-').toLowerCase()
+    const blob = new Blob([optimization.optimizedContent || ''], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${safeName || 'optimized-resume'}.txt`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -280,16 +310,20 @@ export function ProfileContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
       
-      <div className="container mx-auto max-w-4xl px-4 py-8">
+      <div className="container mx-auto max-w-4xl px-4 py-8 flex-1">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
           <div className="mb-8">
+            <Link href="/dashboard" className="mb-4 inline-flex items-center text-sm text-gray-500 hover:text-gray-900">
+              <ArrowLeft className="mr-1 h-4 w-4" />
+              Back to Dashboard
+            </Link>
             <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
             <p className="mt-2 text-lg text-gray-600">
               Manage your personal information and documents
@@ -554,9 +588,56 @@ export function ProfileContent() {
                 </CardContent>
               </Card>
             </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <FileText className="mr-2 h-5 w-5" />
+                    Optimized Resumes
+                  </CardTitle>
+                  <CardDescription>
+                    Your completed resume optimizations saved in your profile
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {recentOptimizations.length > 0 ? (
+                    <div className="space-y-3">
+                      {recentOptimizations.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between rounded-lg bg-gray-50 p-4">
+                          <div>
+                            <p className="font-medium text-gray-900">
+                              {item.jobPosting?.title || 'Optimized Resume'}
+                              {item.jobPosting?.company ? ` - ${item.jobPosting.company}` : ''}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {new Date(item.createdAt).toLocaleDateString('en-US')}
+                              {typeof item.atsScore === 'number' ? ` • ATS ${item.atsScore}%` : ''}
+                            </p>
+                          </div>
+                          <Button variant="outline" size="sm" onClick={() => downloadOptimizedResume(item)}>
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="py-6 text-center">
+                      <FileText className="mx-auto h-8 w-8 text-gray-400" />
+                      <p className="mt-2 text-sm text-gray-600">No optimized resumes yet</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
         </motion.div>
       </div>
+      <SiteFooter />
     </div>
   )
 }

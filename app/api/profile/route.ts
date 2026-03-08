@@ -15,7 +15,22 @@ export async function GET(request: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      include: { profile: true }
+      include: {
+        profile: true,
+        optimizations: {
+          where: { status: 'COMPLETED' },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          include: {
+            jobPosting: {
+              select: {
+                title: true,
+                company: true
+              }
+            }
+          }
+        }
+      }
     })
 
     if (!user) {
@@ -26,7 +41,8 @@ export async function GET(request: NextRequest) {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
-      ...user.profile 
+      ...user.profile,
+      recentOptimizations: user.optimizations
     })
 
   } catch (error) {
