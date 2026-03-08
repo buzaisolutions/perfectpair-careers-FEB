@@ -155,7 +155,15 @@ export async function POST(request: NextRequest) {
         send(controller, { status: 'initial_score', score: initialScore })
         send(controller, { status: 'processing', message: 'Optimizing with AI...' })
 
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+        const geminiApiKey =
+          process.env.GEMINI_API_KEY ||
+          process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
+          process.env.GOOGLE_API_KEY
+        if (!geminiApiKey) {
+          throw new Error('Gemini API key is not configured')
+        }
+
+        const genAI = new GoogleGenerativeAI(geminiApiKey)
         const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
         const isCoverLetterOnly = optimizationType === 'COVER_LETTER_ONLY'

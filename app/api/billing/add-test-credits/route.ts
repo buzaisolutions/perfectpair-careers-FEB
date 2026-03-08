@@ -8,6 +8,10 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json({ error: 'Endpoint disabled in production' }, { status: 403 })
+    }
+
     const session = await getServerSession(authOptions)
 
     if (!session?.user?.id) {

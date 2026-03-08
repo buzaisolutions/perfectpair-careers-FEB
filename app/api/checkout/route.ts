@@ -10,52 +10,66 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(req: Request) {
   try {
-    // 1. Verifica se o usuário está logado
     const session = await getServerSession(authOptions)
 
     if (!session?.user) {
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    // 2. Recebe os dados da página de Pricing
     const body = await req.json()
-    const { planId, price, name, credits } = body
+    const { planId } = body as { planId?: string }
+    if (!planId) {
+      return NextResponse.json({ error: "Plan ID is required" }, { status: 400 })
+    }
 
-    // URL base para retorno
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+      typescript: true,
+    })
 
-    // 3. Cria a sessão de pagamento no Stripe
+    const plans: Record<
+      string,
+      { priceId: string; credits?: number; recurring?: boolean; paymentType: string }
+    > = {
+      resume: {
+        priceId: process.env.STRIPE_PRICE_RESUME || "",
+        credits: 1,
+        paymentType: "ONE_TIME_RESUME",
+      },
+      resume_cover: {
+        priceId: process.env.STRIPE_PRICE_RESUME_COVER || "",
+        credits: 2,
+        paymentType: "ONE_TIME_RESUME_COVER",
+      },
+      monthly: {
+        priceId: process.env.STRIPE_PRICE_MONTHLY || "",
+        recurring: true,
+        paymentType: "MONTHLY_SUBSCRIPTION",
+      },
+    }
+
+    const plan = plans[planId]
+    if (!plan?.priceId) {
+      return NextResponse.json({ error: "Invalid plan or missing Stripe Price ID" }, { status: 400 })
+    }
+
     const stripeSession = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
-      line_items: [
-        {
-          // Modo dinâmico: O preço vem do front-end
-          price_data: {
-            currency: "eur", // <--- DEFINIDO COMO EURO PARA FICAR IGUAL AO FRONTEND
-            product_data: {
-              name: name, // Ex: "Job Seeker Pack"
-              description: `${credits} AI Optimization Credits`,
-            },
-            // Stripe usa centavos (multiplicamos por 100)
-            unit_amount: Math.round(price * 100), 
-          },
-          quantity: 1,
-        },
-      ],
-      mode: "payment", // Pagamento único
-      success_url: `${appUrl}/dashboard?success=true&credits=${credits}`,
+      line_items: [{ price: plan.priceId, quantity: 1 }],
+      mode: plan.recurring ? "subscription" : "payment",
+      success_url: `${appUrl}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/pricing?canceled=true`,
       customer_email: session.user.email || undefined,
       metadata: {
         userId: session.user.id || "unknown",
         userEmail: session.user.email || "unknown",
-        credits: credits.toString(),
-        planId: planId,
+        credits: String(plan.credits || 0),
+        planId,
+        paymentType: plan.paymentType,
       },
     })
 
     return NextResponse.json({ url: stripeSession.url })
-
   } catch (error) {
     console.error("[STRIPE_ERROR]", error)
     return new NextResponse("Internal Server Error", { status: 500 })

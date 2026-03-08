@@ -25,38 +25,98 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Webhook Error' }, { status: 400 });
     }
 
-    // 2. Processa o Evento de Pagamento Aprovado
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object as Stripe.Checkout.Session;
-      
-      // Pegamos os dados que enviamos no metadata lá no checkout
-      const userId = session.metadata?.userId;
-      const planId = session.metadata?.planId;
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const userId = session.metadata?.userId;
+        const paymentType = session.metadata?.paymentType as
+          | 'ONE_TIME_RESUME'
+          | 'ONE_TIME_RESUME_COVER'
+          | 'MONTHLY_SUBSCRIPTION'
+          | undefined;
 
-      if (userId) {
-        console.log(`💰 Pagamento confirmado! User: ${userId} | Plano: ${planId}`);
+        if (!userId) break;
 
-        // 3. Atualiza o banco de dados com os créditos
-        if (planId === 'resume') {
-          // Plano Básico: +1 Crédito
+        const stripePaymentId = (session.payment_intent as string) || session.id;
+        const existingPayment = await prisma.payment.findUnique({
+          where: { stripePaymentId },
+        });
+        if (existingPayment) break;
+
+        await prisma.payment.create({
+          data: {
+            userId,
+            stripePaymentId,
+            amount: session.amount_total || 0,
+            paymentType: paymentType || 'ONE_TIME_RESUME',
+            status: 'COMPLETED',
+            creditsGranted: parseInt(session.metadata?.credits || '0', 10) || undefined,
+            description: `Payment for ${session.metadata?.planId || 'unknown-plan'}`,
+          },
+        });
+
+        if (session.mode === 'subscription') {
+          const subscriptionId = session.subscription as string | null;
+          if (subscriptionId) {
+            await prisma.subscription.upsert({
+              where: { userId },
+              update: {
+                status: 'ACTIVE',
+                planType: 'MONTHLY',
+                stripeSubscriptionId: subscriptionId,
+                currentPeriodStart: new Date(),
+                currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              },
+              create: {
+                userId,
+                status: 'ACTIVE',
+                planType: 'MONTHLY',
+                stripeSubscriptionId: subscriptionId,
+                currentPeriodStart: new Date(),
+                currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              },
+            });
+          }
+
           await prisma.user.update({
             where: { id: userId },
-            data: { credits: { increment: 1 } },
+            data: { credits: -1 },
           });
-        } else if (planId === 'resume_cover') {
-          // Plano Pro: +2 Créditos
-          await prisma.user.update({
-            where: { id: userId },
-            data: { credits: { increment: 2 } },
+        } else {
+          const creditsToAdd = parseInt(session.metadata?.credits || '0', 10);
+          if (creditsToAdd > 0) {
+            await prisma.user.update({
+              where: { id: userId },
+              data: { credits: { increment: creditsToAdd } },
+            });
+          }
+        }
+        break;
+      }
+
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object as Stripe.Subscription;
+        const dbSubscription = await prisma.subscription.findFirst({
+          where: { stripeSubscriptionId: subscription.id },
+        });
+        if (dbSubscription) {
+          await prisma.subscription.update({
+            where: { id: dbSubscription.id },
+            data: {
+              status: 'CANCELLED',
+              cancelAtPeriodEnd: true,
+            },
           });
-        } else if (planId === 'monthly') {
-          // Plano Mensal: +100 Créditos (ou lógica de assinatura premium)
           await prisma.user.update({
-            where: { id: userId },
-            data: { credits: { increment: 100 } },
+            where: { id: dbSubscription.userId },
+            data: { credits: 0 },
           });
         }
+        break;
       }
+
+      default:
+        break;
     }
 
     return NextResponse.json({ received: true });
