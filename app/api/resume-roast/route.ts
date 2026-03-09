@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import mammoth from 'mammoth'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getSettingOrEnv } from '@/lib/runtime-settings'
+import { verifyRoastAccessToken } from '@/lib/roast-access'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,6 +66,15 @@ async function extractTextFromFile(file: File): Promise<string> {
 
 export async function POST(request: NextRequest) {
   try {
+    const accessToken = request.cookies.get('roast_access')?.value
+    const access = verifyRoastAccessToken(accessToken)
+    if (!access) {
+      return NextResponse.json(
+        { error: 'Access denied. Confirm your email link before using Resume Roast.' },
+        { status: 401 }
+      )
+    }
+
     const formData = await request.formData()
     const file = formData.get('file') as File | null
     const resumeTextInput = String(formData.get('resumeText') || '').trim()
@@ -162,4 +172,3 @@ ${combinedText.slice(0, 12000)}`
     )
   }
 }
-

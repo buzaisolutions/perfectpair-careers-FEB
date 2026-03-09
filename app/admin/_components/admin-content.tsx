@@ -35,6 +35,8 @@ const DEFAULT_KEYS = [
   'DATABASE_URL',
   'NEXTAUTH_SECRET',
   'NEXTAUTH_URL',
+  'RESEND_API_KEY',
+  'ROAST_FROM_EMAIL',
 ]
 
 export function AdminContent() {

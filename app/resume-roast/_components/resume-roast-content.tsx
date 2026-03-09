@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -11,7 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/hooks/use-toast'
-import { Flame, Upload, Sparkles, ArrowRight } from 'lucide-react'
+import { Flame, Sparkles, ArrowRight, MailCheck } from 'lucide-react'
 
 type RoastResult = {
   hireabilityScore: number
@@ -32,7 +33,14 @@ type RoastApiResponse = {
 const STORAGE_KEY = 'perfectpair_resume_roast_last_result'
 
 export function ResumeRoastContent() {
+  const searchParams = useSearchParams()
   const { toast } = useToast()
+  const [leadName, setLeadName] = useState('')
+  const [leadEmail, setLeadEmail] = useState('')
+  const [accessGranted, setAccessGranted] = useState(false)
+  const [accessUser, setAccessUser] = useState<{ name?: string; email?: string } | null>(null)
+  const [sendingLink, setSendingLink] = useState(false)
+  const [verifyingLink, setVerifyingLink] = useState(false)
   const [resumeText, setResumeText] = useState('')
   const [targetRole, setTargetRole] = useState('')
   const [file, setFile] = useState<File | null>(null)
@@ -44,18 +52,75 @@ export function ResumeRoastContent() {
   const [storageMessage, setStorageMessage] = useState('')
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (!raw) return
-      const parsed = JSON.parse(raw)
-      if (parsed?.result) {
-        setResult(parsed.result)
-        setStorageMessage('Loaded your last roast from local browser storage.')
+    async function boot() {
+      const token = searchParams.get('token')
+      const email = searchParams.get('email')
+      const name = searchParams.get('name') || ''
+
+      if (token && email) {
+        setVerifyingLink(true)
+        try {
+          const res = await fetch('/api/resume-roast/verify-link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, email, name }),
+          })
+          const data = await res.json()
+          if (!res.ok) throw new Error(data?.error || 'Invalid verification link.')
+          setAccessGranted(true)
+          setAccessUser({ name, email })
+          window.history.replaceState({}, '', '/resume-roast')
+          toast({ title: 'Email verified', description: 'Resume Roast is now unlocked.' })
+        } catch (err: any) {
+          setError(err?.message || 'Could not verify email link.')
+        } finally {
+          setVerifyingLink(false)
+        }
+      } else {
+        const accessRes = await fetch('/api/resume-roast/access')
+        if (accessRes.ok) {
+          const accessData = await accessRes.json()
+          setAccessGranted(true)
+          setAccessUser(accessData?.user || null)
+        }
       }
-    } catch {
-      // ignore localStorage parsing errors
+
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY)
+        if (!raw) return
+        const parsed = JSON.parse(raw)
+        if (parsed?.result) {
+          setResult(parsed.result)
+          setStorageMessage('Loaded your last roast from local browser storage.')
+        }
+      } catch {
+        // ignore localStorage parsing errors
+      }
     }
-  }, [])
+    void boot()
+  }, [searchParams, toast])
+
+  async function handleSendAccessLink() {
+    setError('')
+    setSendingLink(true)
+    try {
+      const response = await fetch('/api/resume-roast/request-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: leadName, email: leadEmail }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data?.error || 'Could not send access link.')
+      toast({
+        title: 'Verification email sent',
+        description: 'Check your inbox and click the confirmation link to unlock Resume Roast.',
+      })
+    } catch (err: any) {
+      setError(err?.message || 'Failed to send verification link.')
+    } finally {
+      setSendingLink(false)
+    }
+  }
 
   async function handleRoast() {
     setLoading(true)
@@ -107,6 +172,67 @@ export function ResumeRoastContent() {
         </p>
       </div>
 
+      {!accessGranted && (
+        <Card className="mx-auto mb-8 max-w-2xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MailCheck className="h-5 w-5 text-orange-600" />
+              Confirm Email to Unlock Roast
+            </CardTitle>
+            <CardDescription>
+              Enter your name and email. We will send a secure confirmation link before enabling Resume Roast.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="leadName">Full name</Label>
+              <Input
+                id="leadName"
+                placeholder="Your full name"
+                value={leadName}
+                onChange={(e) => setLeadName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="leadEmail">Email</Label>
+              <Input
+                id="leadEmail"
+                type="email"
+                placeholder="you@email.com"
+                value={leadEmail}
+                onChange={(e) => setLeadEmail(e.target.value)}
+              />
+            </div>
+            <Button
+              onClick={handleSendAccessLink}
+              disabled={sendingLink || !leadName.trim() || !leadEmail.trim()}
+              className="w-full"
+            >
+              {sendingLink ? 'Sending Link...' : 'Send Confirmation Link'}
+            </Button>
+            {verifyingLink && (
+              <Alert>
+                <AlertDescription>Verifying your link...</AlertDescription>
+              </Alert>
+            )}
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {accessGranted && accessUser?.email && (
+        <Alert className="mb-6">
+          <AlertDescription>
+            Verified access: {accessUser.name || 'User'} ({accessUser.email})
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!accessGranted ? null : (
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -278,7 +404,7 @@ export function ResumeRoastContent() {
           </CardContent>
         </Card>
       </div>
+      )}
     </main>
   )
 }
-
