@@ -71,6 +71,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Please enter a valid email.' }, { status: 400 })
     }
 
+    const requestLimitIdentifier = `roast-link-limit:${email}`
+    const alreadyRequested = await prisma.verificationToken.findFirst({
+      where: { identifier: requestLimitIdentifier },
+    })
+    if (alreadyRequested) {
+      return NextResponse.json(
+        { error: 'This email already requested a Roast access link. Only one link request is allowed per email.' },
+        { status: 429 }
+      )
+    }
+
     const rawToken = randomBytes(32).toString('hex')
     const tokenHash = createHash('sha256').update(rawToken).digest('hex')
     const identifier = `roast:${email}`
@@ -82,6 +93,13 @@ export async function POST(request: NextRequest) {
         identifier,
         token: tokenHash,
         expires,
+      },
+    })
+    await prisma.verificationToken.create({
+      data: {
+        identifier: requestLimitIdentifier,
+        token: createHash('sha256').update(`lock:${email}`).digest('hex'),
+        expires: new Date('2100-01-01T00:00:00.000Z'),
       },
     })
 

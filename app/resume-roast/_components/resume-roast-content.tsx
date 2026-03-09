@@ -16,6 +16,9 @@ import { Flame, Sparkles, ArrowRight, MailCheck } from 'lucide-react'
 
 type RoastResult = {
   hireabilityScore: number
+  currentScore: number
+  projectedScore: number
+  scoreDelta: number
   headline: string
   roast: string[]
   quickWins: string[]
@@ -43,6 +46,7 @@ export function ResumeRoastContent() {
   const [verifyingLink, setVerifyingLink] = useState(false)
   const [resumeText, setResumeText] = useState('')
   const [targetRole, setTargetRole] = useState('')
+  const [jobDescription, setJobDescription] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [allowFutureStorage, setAllowFutureStorage] = useState(false)
   const [saveLocally, setSaveLocally] = useState(true)
@@ -131,6 +135,7 @@ export function ResumeRoastContent() {
       const formData = new FormData()
       formData.append('resumeText', resumeText)
       formData.append('targetRole', targetRole)
+      formData.append('jobDescription', jobDescription)
       formData.append('allowFutureStorage', String(allowFutureStorage))
       if (file) formData.append('file', file)
 
@@ -251,6 +256,17 @@ export function ResumeRoastContent() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="jobDescription">Job description (optional, improves score analysis)</Label>
+              <Textarea
+                id="jobDescription"
+                rows={6}
+                placeholder="Paste the job description here to compare your current vs projected score."
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="resumeFile">Resume file (optional if text is provided)</Label>
               <Input
                 id="resumeFile"
@@ -332,8 +348,13 @@ export function ResumeRoastContent() {
               <>
                 <div className="flex items-center justify-between rounded-lg border bg-white p-4">
                   <div>
-                    <p className="text-sm text-gray-500">Hireability Score</p>
-                    <p className="text-3xl font-bold text-gray-900">{result.hireabilityScore}/100</p>
+                    <p className="text-sm text-gray-500">Current Score</p>
+                    <p className="text-3xl font-bold text-gray-900">{result.currentScore}/100</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Projected Score (after background optimization)</p>
+                    <p className="text-3xl font-bold text-green-700">{result.projectedScore}/100</p>
+                    <p className="text-xs text-green-700">+{result.scoreDelta} points</p>
                   </div>
                   <Badge className="bg-orange-100 text-orange-700">{result.headline}</Badge>
                 </div>

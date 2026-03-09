@@ -8,6 +8,9 @@ export const dynamic = 'force-dynamic'
 
 type RoastResult = {
   hireabilityScore: number
+  currentScore: number
+  projectedScore: number
+  scoreDelta: number
   headline: string
   roast: string[]
   quickWins: string[]
@@ -33,8 +36,13 @@ function extractJsonBlock(text: string): string {
 }
 
 function normalizeResult(data: any): RoastResult {
+  const currentScore = clampScore(Number(data?.currentScore ?? data?.hireabilityScore ?? 0))
+  const projectedScore = clampScore(Number(data?.projectedScore ?? currentScore))
   return {
-    hireabilityScore: clampScore(Number(data?.hireabilityScore ?? 0)),
+    hireabilityScore: projectedScore,
+    currentScore,
+    projectedScore,
+    scoreDelta: Math.max(0, projectedScore - currentScore),
     headline: String(data?.headline || 'Your resume needs stronger impact to stand out.'),
     roast: Array.isArray(data?.roast) ? data.roast.map(String).slice(0, 6) : [],
     quickWins: Array.isArray(data?.quickWins) ? data.quickWins.map(String).slice(0, 6) : [],
@@ -79,6 +87,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File | null
     const resumeTextInput = String(formData.get('resumeText') || '').trim()
     const targetRole = String(formData.get('targetRole') || '').trim()
+    const jobDescription = String(formData.get('jobDescription') || '').trim()
     const allowFutureStorage = String(formData.get('allowFutureStorage') || 'false') === 'true'
 
     const allowedTypes = [
@@ -118,21 +127,25 @@ export async function POST(request: NextRequest) {
     const genAI = new GoogleGenerativeAI(geminiApiKey)
     const model = genAI.getGenerativeModel({ model: modelName })
 
-    const prompt = `You are an expert recruiter and ATS coach. Roast this resume in a bold, witty, constructive tone.
+    const prompt = `You are an expert recruiter and ATS coach. Analyze this resume in a direct, critical, constructive tone.
 Never insult protected attributes, health, nationality, religion, or appearance.
-Be direct, practical, and actionable.
+Focus only on mistakes, conceptual failures, and ATS weaknesses.
+Do not rewrite the resume and do not generate replacement sections.
 
 Return strict JSON only with this exact structure:
 {
-  "hireabilityScore": number from 0 to 100,
-  "headline": "1 short sentence",
-  "roast": ["3 to 6 sharp bullets explaining problems"],
+  "currentScore": number from 0 to 100 (current match score against job description),
+  "projectedScore": number from 0 to 100 (estimated score after optimization done in background),
+  "hireabilityScore": number from 0 to 100 (same as projectedScore),
+  "headline": "1 short sentence summarizing the main weakness",
+  "roast": ["3 to 6 bullets listing critical errors and conceptual failures"],
   "quickWins": ["3 to 6 immediate fixes"],
   "missingKeywords": ["up to 10 keywords/phrases"],
-  "rewrittenSummary": "a stronger 3-4 line professional summary"
+  "rewrittenSummary": ""
 }
 
 Target role (optional): ${targetRole || 'Not provided'}
+Job description (optional): ${jobDescription || 'Not provided'}
 
 Resume:
 ${combinedText.slice(0, 12000)}`
@@ -146,10 +159,12 @@ ${combinedText.slice(0, 12000)}`
       parsed = normalizeResult(JSON.parse(jsonText))
     } catch {
       parsed = normalizeResult({
-        hireabilityScore: 50,
+        currentScore: 50,
+        projectedScore: 55,
+        hireabilityScore: 55,
         headline: 'We analyzed your resume, but the structured roast format failed.',
         roast: [rawText.slice(0, 300)],
-        quickWins: ['Try again with a cleaner resume text or a PDF/DOCX file.'],
+        quickWins: ['Try again with cleaner resume content and clearer section headers.'],
         missingKeywords: [],
         rewrittenSummary: '',
       })
