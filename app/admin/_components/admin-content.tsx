@@ -37,6 +37,7 @@ const DEFAULT_KEYS = [
   'NEXTAUTH_URL',
   'RESEND_API_KEY',
   'ROAST_FROM_EMAIL',
+  'ROAST_PUBLIC_URL',
 ]
 
 export function AdminContent() {
@@ -47,6 +48,7 @@ export function AdminContent() {
   const [customKey, setCustomKey] = useState('')
   const [resendApiKey, setResendApiKey] = useState('')
   const [roastFromEmail, setRoastFromEmail] = useState('')
+  const [roastPublicUrl, setRoastPublicUrl] = useState('')
 
   const [env, setEnv] = useState<Record<string, string>>({})
   const [envLocal, setEnvLocal] = useState<Record<string, string>>({})
@@ -79,6 +81,7 @@ export function AdminContent() {
     setSelectedValue(settingsMap.get(selectedKey) || '')
     setResendApiKey(settingsMap.get('RESEND_API_KEY') || '')
     setRoastFromEmail(settingsMap.get('ROAST_FROM_EMAIL') || '')
+    setRoastPublicUrl(settingsMap.get('ROAST_PUBLIC_URL') || '')
   }, [selectedKey, settingsMap])
 
   async function loadSettings() {
@@ -240,11 +243,23 @@ export function AdminContent() {
                   onChange={(e) => setRoastFromEmail(e.target.value)}
                 />
               </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="roastPublicUrl">ROAST_PUBLIC_URL</Label>
+                <Input
+                  id="roastPublicUrl"
+                  placeholder="https://roast.perfectpaircareers.com"
+                  value={roastPublicUrl}
+                  onChange={(e) => setRoastPublicUrl(e.target.value)}
+                />
+              </div>
             </div>
             <div className="flex gap-3">
               <Button onClick={() => saveSetting('RESEND_API_KEY', resendApiKey)}>Save RESEND_API_KEY</Button>
               <Button variant="outline" onClick={() => saveSetting('ROAST_FROM_EMAIL', roastFromEmail)}>
                 Save ROAST_FROM_EMAIL
+              </Button>
+              <Button variant="outline" onClick={() => saveSetting('ROAST_PUBLIC_URL', roastPublicUrl)}>
+                Save ROAST_PUBLIC_URL
               </Button>
             </div>
           </CardContent>

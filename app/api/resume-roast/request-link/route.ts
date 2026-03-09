@@ -85,10 +85,12 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    const appUrl =
-      process.env.NEXTAUTH_URL ||
+    const configuredPublicUrl =
+      (await getSettingOrEnv('ROAST_PUBLIC_URL', process.env.ROAST_PUBLIC_URL || '')) ||
       process.env.NEXT_PUBLIC_APP_URL ||
-      'https://www.perfectpaircareers.com'
+      ''
+    const hostOrigin = request.nextUrl.origin
+    const appUrl = configuredPublicUrl || hostOrigin || 'https://www.perfectpaircareers.com'
     const url = new URL('/resume-roast', appUrl)
     url.searchParams.set('email', email)
     url.searchParams.set('name', name)
@@ -107,4 +109,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-
