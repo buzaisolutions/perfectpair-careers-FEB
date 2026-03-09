@@ -45,6 +45,8 @@ export function AdminContent() {
   const [selectedKey, setSelectedKey] = useState(DEFAULT_KEYS[0])
   const [selectedValue, setSelectedValue] = useState('')
   const [customKey, setCustomKey] = useState('')
+  const [resendApiKey, setResendApiKey] = useState('')
+  const [roastFromEmail, setRoastFromEmail] = useState('')
 
   const [env, setEnv] = useState<Record<string, string>>({})
   const [envLocal, setEnvLocal] = useState<Record<string, string>>({})
@@ -75,6 +77,8 @@ export function AdminContent() {
 
   useEffect(() => {
     setSelectedValue(settingsMap.get(selectedKey) || '')
+    setResendApiKey(settingsMap.get('RESEND_API_KEY') || '')
+    setRoastFromEmail(settingsMap.get('ROAST_FROM_EMAIL') || '')
   }, [selectedKey, settingsMap])
 
   async function loadSettings() {
@@ -206,6 +210,42 @@ export function AdminContent() {
               {DEFAULT_KEYS.map((k) => (
                 <Badge key={k} variant="outline" className="cursor-pointer" onClick={() => setSelectedKey(k)}>{k}</Badge>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Email Delivery (Resend)</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Configure email settings used to send Resume Roast confirmation links.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="resendApiKey">RESEND_API_KEY</Label>
+                <Input
+                  id="resendApiKey"
+                  type="password"
+                  placeholder="re_..."
+                  value={resendApiKey}
+                  onChange={(e) => setResendApiKey(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="roastFromEmail">ROAST_FROM_EMAIL</Label>
+                <Input
+                  id="roastFromEmail"
+                  placeholder="Perfect Pair Careers <no-reply@perfectpaircareers.com>"
+                  value={roastFromEmail}
+                  onChange={(e) => setRoastFromEmail(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Button onClick={() => saveSetting('RESEND_API_KEY', resendApiKey)}>Save RESEND_API_KEY</Button>
+              <Button variant="outline" onClick={() => saveSetting('ROAST_FROM_EMAIL', roastFromEmail)}>
+                Save ROAST_FROM_EMAIL
+              </Button>
             </div>
           </CardContent>
         </Card>
