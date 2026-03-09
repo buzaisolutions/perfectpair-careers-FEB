@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { Header } from '@/components/header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -9,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
+import { ArrowLeft } from 'lucide-react'
 
 type Setting = { id: string; key: string; value: string }
 type Coupon = { id: string; code: string; credits: number; isActive: boolean; maxUses?: number | null; usesCount: number; expiresAt?: string | null }
@@ -180,6 +182,10 @@ export function AdminContent() {
       <Header />
       <main className="container mx-auto max-w-7xl px-4 py-8 space-y-8">
         <div>
+          <Link href="/dashboard" className="mb-3 inline-flex items-center text-sm text-gray-500 hover:text-gray-900">
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            Back to Dashboard
+          </Link>
           <h1 className="text-3xl font-bold">Admin Management Panel</h1>
           <p className="text-gray-600 mt-1">Restricted to rcarlos75@me.com</p>
         </div>
