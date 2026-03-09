@@ -26,6 +26,9 @@ export function SiteFooter() {
               <Link href="/dashboard" className="text-sm text-gray-600 hover:text-primary">
                 Dashboard
               </Link>
+              <Link href="/resume-roast" className="text-sm text-gray-600 hover:text-primary">
+                AI Resume Roast
+              </Link>
               <Link href="/" className="text-sm text-gray-600 hover:text-primary">
                 Home
               </Link>

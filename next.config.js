@@ -8,6 +8,15 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  async rewrites() {
+    return [
+      {
+        source: '/:path((?!api|_next/static|_next/image|favicon.ico).*)',
+        has: [{ type: 'host', value: 'roast.perfectpaircareers.com' }],
+        destination: '/resume-roast',
+      },
+    ]
+  },
 };
 
 export default nextConfig;
