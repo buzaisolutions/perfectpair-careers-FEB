@@ -16,6 +16,8 @@ export function DashboardContent({ user }: DashboardContentProps) {
   const firstName = user?.firstName || user?.name?.split(' ')[0] || 'User'
   const credits = user?.credits ?? 0 // Se for null ou undefined, usa 0
   const hasCredits = credits > 0
+  const userEmail = String(user?.email || '').toLowerCase().trim()
+  const isAdminUser = userEmail === 'rcarlos75@me.com' || userEmail === 'rcarlos75@icloud.com'
 
   return (
     <div className="container mx-auto w-full max-w-7xl py-8 space-y-8">
@@ -44,6 +46,14 @@ export function DashboardContent({ user }: DashboardContentProps) {
         </div>
 
         <div className="flex space-x-2">
+          {isAdminUser && (
+            <Link href="/admin">
+              <Button variant="secondary">
+                <Settings className="mr-2 h-4 w-4" />
+                Admin Panel
+              </Button>
+            </Link>
+          )}
            <Link href="/pricing">
             <Button variant="outline">
               <CreditCard className="mr-2 h-4 w-4" />
